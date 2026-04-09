@@ -702,13 +702,12 @@
                                     <th>物料 SAP号 / 名称</th>
                                     <th>出库数量</th>
                                     <th>领用人</th>
-                                    <th>出库账目</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="outboundHistoryBody">
                                 <tr>
-                                    <td colspan="8" style="text-align: center;">加载中...</td>
+                                    <td colspan="7" style="text-align: center;">加载中...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2177,21 +2176,24 @@
 
                 renderOutboundHistory(data.items, data.total);
             } catch (error) {
-                document.getElementById('outboundHistoryBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--color-danger)">加载失败: ${error.message}</td></tr>`;
+                document.getElementById('outboundHistoryBody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--color-danger)">加载失败: ${error.message}</td></tr>`;
             }
         }
 
         function renderOutboundHistory(items, total) {
             const tbody = document.getElementById('outboundHistoryBody');
             if (items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">无记录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">无记录</td></tr>';
                 document.getElementById('outboundHistoryPagination').innerHTML = '';
                 return;
             }
 
             tbody.innerHTML = items.map(item => `
                 <tr>
-                    <td>${item.has_receipt === '是' ? '<span style="color:var(--color-success);">已做</span>' : '<span style="color:var(--color-danger);">未做</span>'}</td>
+                    <td>${item.has_receipt === '是'
+                        ? '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(34,197,94,0.15);color:var(--color-success);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:3px 10px;font-size:0.8rem;font-weight:600;">✅ 已做收货单</span>'
+                        : `<button onclick="markOutboundReceiptDone(${item.id})" style="display:inline-flex;align-items:center;gap:4px;background:rgba(251,191,36,0.15);color:#d97706;border:1px solid rgba(251,191,36,0.4);border-radius:12px;padding:3px 10px;font-size:0.8rem;font-weight:600;cursor:pointer;" title="点击标记为已做收货单">🔲 未做 →</button>`
+                    }</td>
                     <td>${new Date(item.outbound_date).toLocaleString()}</td>
                     <td>
                         <div style="display: flex; gap: var(--spacing-xs);">
@@ -2205,13 +2207,7 @@
                     </td>
                     <td style="color:var(--color-danger);font-weight:600;">-${item.quantity}</td>
                     <td>${item.withdraw_person || '-'}</td>
-                    <td><span class="badge ${item.sap_status === '已录入' ? 'badge-success' : 'badge-warning'}">${item.sap_status}</span></td>
                     <td>
-                        ${item.has_receipt === '否' ? `<button class="btn btn-icon" onclick="markOutboundReceiptDone(${item.id})" title="标记为已做" style="color:var(--accent-primary)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M20 6 9 17l-5-5"/>
-                            </svg>
-                        </button>` : ''}
                         <button class="btn btn-icon" onclick="deleteOutboundRecord(${item.id})" title="删除出库记录" style="color:var(--color-danger)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"/>
@@ -2228,12 +2224,13 @@
         }
 
         async function markOutboundReceiptDone(id) {
+            if (!await confirmDialog('确认将此出库记录标记为「已做收货单」？')) return;
             try {
                 await api.put(`/warehouse/outbound/${id}/receipt-done`, {});
-                showToast('已更新为已做', 'success');
+                showToast('已标记为已做收货单', 'success');
                 loadOutboundHistory(currentOutboundHistoryPage);
-            } catch (error) {
-                showToast('更新失败: ' + error.message, 'error');
+            } catch (e) {
+                showToast('操作失败：' + e.message, 'error');
             }
         }
 
