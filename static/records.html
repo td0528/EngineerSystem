@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记录功能 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <style>
+        .records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .record-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .record-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .record-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: var(--bg-tertiary);
+        }
+
+        .record-content {
+            padding: var(--spacing-lg);
+        }
+
+        .record-title {
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .record-text {
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .record-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .quick-record-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .type-chips {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .type-chip {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .type-chip:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .type-chip.active {
+            background: var(--accent-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .image-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .image-upload-area:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .image-preview {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: var(--radius-md);
+            margin-top: var(--spacing-md);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>记录功能</h1>
+                    <span class="badge" id="totalCount">0 条记录</span>
+                </div>
+            </div>
+
+            <!-- Quick Record Box -->
+            <div class="quick-record-box">
+                <h3 style="margin-bottom: var(--spacing-lg);">快速记录</h3>
+                <form id="quickRecordForm">
+                    <div class="type-chips" id="recordTypeChips">
+                        <span class="type-chip active" data-type="想法">💡 想法</span>
+                        <span class="type-chip" data-type="维修日志">🔧 维修日志</span>
+                        <span class="type-chip" data-type="问题">⚠️ 问题</span>
+                        <span class="type-chip" data-type="改进建议">📈 改进建议</span>
+                        <span class="type-chip" data-type="其他">📝 其他</span>
+                    </div>
+                    <input type="hidden" id="recordType" value="想法">
+
+                    <div class="form-group">
+                        <input type="text" class="form-input" id="recordTitle" placeholder="标题（可选）...">
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="recordContent" rows="4" placeholder="记录内容..."
+                            required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <div class="image-upload-area" onclick="document.getElementById('recordImage').click()">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)"
+                                stroke-width="2" style="margin-bottom: var(--spacing-sm);">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <div style="color: var(--text-muted);">点击或拖拽上传图片</div>
+                            <input type="file" id="recordImage" accept="image/*" style="display: none;"
+                                onchange="previewRecordImage(this)">
+                            <img id="imagePreview" class="image-preview" style="display: none;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-md);">
+                        <button type="button" class="btn btn-primary" onclick="saveRecord()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                <polyline points="17 21 17 13 7 13 7 21" />
+                            </svg>
+                            保存记录
+                        </button>
+                        <button type="reset" class="btn btn-secondary">清空</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Filter -->
+            <div class="filter-bar">
+                <div class="search-box" style="flex: 1;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input type="text" class="form-input" id="searchInput" placeholder="搜索记录..."
+                        oninput="debouncedSearch()">
+                </div>
+                <select class="form-select" id="typeFilter" onchange="loadRecords()">
+                    <option value="">所有类型</option>
+                    <option value="想法">💡 想法</option>
+                    <option value="维修日志">🔧 维修日志</option>
+                    <option value="问题">⚠️ 问题</option>
+                    <option value="改进建议">📈 改进建议</option>
+                    <option value="其他">📝 其他</option>
+                </select>
+            </div>
+
+            <!-- Records Grid -->
+            <div class="records-grid" id="recordsGrid">
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                    加载中...
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Record Detail Modal -->
+    <div class="modal-overlay" id="recordDetailModal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="recordDetailTitle">记录详情</h3>
+                <button class="btn btn-icon" onclick="closeModal('recordDetailModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="recordDetailContent"></div>
+            <div class="modal-footer" id="recordDetailFooter"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        const debouncedSearch = debounce(() => loadRecords(), 300);
+
+        // Type chip selection
+        document.querySelectorAll('.type-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                document.getElementById('recordType').value = chip.dataset.type;
+            });
+        });
+
+        function previewRecordImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function loadRecords() {
+            const search = document.getElementById('searchInput').value;
+            const type = document.getElementById('typeFilter').value;
+            const container = document.getElementById('recordsGrid');
+
+            try {
+                let url = '/records?limit=50';
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (type) url += `&record_type=${encodeURIComponent(type)}`;
+
+                const data = await api.get(url);
+                document.getElementById('totalCount').textContent = `${data.total} 条记录`;
+
+                if (data.items.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">暂无记录</div>';
+                } else {
+                    container.innerHTML = data.items.map(record => `
+                        <div class="record-card" onclick="viewRecord(${record.id})">
+                            ${record.image_path ? `<img class="record-image" src="${record.image_path}" alt="">` : `<div class="record-image" style="display: flex; align-items: center; justify-content: center; font-size: 3rem;">${getTypeEmoji(record.record_type)}</div>`}
+                            <div class="record-content">
+                                <div class="record-title">${record.title || record.record_type}</div>
+                                <div class="record-text">${record.content}</div>
+                                <div class="record-meta">
+                                    <span>${formatDateTime(record.created_at)}</span>
+                                    ${record.converted_to_task ? '<span class="badge badge-info">已转为任务</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        function getTypeEmoji(type) {
+            const emojis = { '想法': '💡', '维修日志': '🔧', '问题': '⚠️', '改进建议': '📈', '其他': '📝' };
+            return emojis[type] || '📝';
+        }
+
+        async function saveRecord() {
+            const type = document.getElementById('recordType').value;
+            const title = document.getElementById('recordTitle').value;
+            const content = document.getElementById('recordContent').value;
+            const imageInput = document.getElementById('recordImage');
+
+            if (!content) {
+                showToast('请输入记录内容', 'warning');
+                return;
+            }
+
+            try {
+                // First create the record
+                const record = await api.post('/records', {
+                    record_type: type,
+                    title: title || null,
+                    content: content
+                });
+
+                // If there's an image, upload it
+                if (imageInput.files && imageInput.files[0]) {
+                    const formData = new FormData();
+                    formData.append('file', imageInput.files[0]);
+                    await api.upload(`/records/${record.id}/image`, formData);
+                }
+
+                showToast('记录保存成功');
+                document.getElementById('quickRecordForm').reset();
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('recordType').value = '想法';
+                document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+                document.querySelector('.type-chip[data-type="想法"]').classList.add('active');
+
+                loadRecords();
+            } catch (error) {
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function viewRecord(id) {
+            try {
+                const record = await api.get(`/records/${id}`);
+
+                document.getElementById('recordDetailTitle').textContent = record.title || record.record_type;
+                document.getElementById('recordDetailContent').innerHTML = `
+                    <span class="badge badge-info" style="margin-bottom: var(--spacing-md);">${getTypeEmoji(record.record_type)} ${record.record_type}</span>
+                    ${record.image_path ? `<img src="${record.image_path}" style="width: 100%; border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">` : ''}
+                    <p style="white-space: pre-wrap;">${record.content}</p>
+                    <div style="margin-top: var(--spacing-lg); color: var(--text-muted); font-size: 0.875rem;">
+                        创建于 ${formatDateTime(record.created_at)}
+                    </div>
+                `;
+
+                document.getElementById('recordDetailFooter').innerHTML = `
+                    ${!record.converted_to_task ? `<button class="btn btn-secondary" onclick="convertToTask(${record.id})">转为任务</button>` : '<span class="badge badge-success">已转为任务</span>'}
+                    <button class="btn btn-danger" onclick="deleteRecord(${record.id})">删除</button>
+                `;
+
+                openModal('recordDetailModal');
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        async function convertToTask(id) {
+            try {
+                await api.post(`/records/${id}/convert-to-task`);
+                showToast('已转为任务');
+                closeModal('recordDetailModal');
+                loadRecords();
+            } catch (error) {
+                showToast('转换失败: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteRecord(id) {
+            if (!await confirmDialog('确定要删除这条记录吗？')) return;
+
+            try {
+                await api.delete(`/records/${id}`);
+                showToast('记录已删除');
+                closeModal('recordDetailModal');
+                loadRecords();
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        loadRecords();
+    </script>
+</body>
+
+</html>

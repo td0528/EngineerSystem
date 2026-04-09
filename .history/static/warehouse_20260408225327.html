@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <style>
+        .action-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+            background: var(--bg-card);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .action-tab {
+            flex: 1;
+            padding: var(--spacing-md);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+
+        .action-tab:hover {
+            background: rgba(14, 165, 233, 0.1);
+        }
+
+        .action-tab.active {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .stock-formula {
+            background: var(--bg-tertiary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stock-formula code {
+            color: var(--accent-primary);
+        }
+
+        .po-search-section {
+            background: var(--bg-card);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .po-items-list {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .po-item {
+            display: grid;
+            grid-template-columns: auto 80px 1fr 1fr 1fr 1fr auto;
+            gap: var(--spacing-md);
+            align-items: center;
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+        }
+
+        .po-item.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .material-image-small {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            background: var(--bg-tertiary);
+        }
+
+        .stock-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+
+        .stock-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .traceability-action-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+        }
+
+        .traceability-action-left {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .traceability-action-right {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        #traceabilityModal .modal {
+            width: 96vw;
+            max-width: 1500px;
+            max-height: 88vh;
+        }
+
+        #traceabilityModal .modal-body {
+            max-height: calc(88vh - 90px);
+            overflow-y: auto;
+        }
+
+        #traceabilityModalPanel {
+            display: grid;
+            gap: var(--spacing-md);
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        }
+
+        .stock-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 1.5rem !important;
+        }
+
+        th.sortable:hover {
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .sort-icon {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            opacity: 0.3;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 15l5 5 5-5M7 9l5-5 5 5'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            transition: opacity 0.2s;
+        }
+
+        th.sortable.asc .sort-icon {
+            opacity: 1;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E");
+        }
+
+        th.sortable.desc .sort-icon {
+            opacity: 1;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M19 12l-7 7-7-7'/%3E%3C/svg%3E");
+        }
+
+        .material-thumb {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .thumb-item {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+        }
+
+        .pdf-mini {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--color-danger);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .pdf-mini:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Lightbox overlay styles */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: var(--radius-md);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-content iframe {
+            width: 80vw;
+            height: 85vh;
+            border: none;
+            border-radius: var(--radius-md);
+            background: white;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .lightbox-close:hover {
+            color: var(--accent-primary);
+        }
+
+        .lightbox-controls {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .lightbox-controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .lightbox-controls button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .lightbox-content img.zoomable {
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+
+        .zoom-level {
+            color: white;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>仓库管理</h1>
+                </div>
+            </div>
+
+            <!-- Action Tabs -->
+            <div class="action-tabs">
+                <button class="action-tab active" onclick="switchTab('stock', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    库存一览
+                </button>
+                <button class="action-tab" onclick="switchTab('inbound', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22V12M8 16l4-4 4 4" />
+                        <path d="M20 12V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6" />
+                    </svg>
+                    入库管理
+                </button>
+                <button class="action-tab" onclick="switchTab('outbound', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v10M8 8l4 4 4-4" />
+                        <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6" />
+                    </svg>
+                    出库管理
+                </button>
+            </div>
+
+            <!-- Stock Overview Section -->
+            <div id="stockSection">
+                <div class="stock-formula">
+                    库存公式: <code>实际数量 = SAP数量 + 未录入SAP数量 - 未录入SAP已领取数量 - 录入SAP已领取数量</code>
+                </div>
+
+                <div class="filter-bar">
+                    <div class="search-box" style="flex: 1;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input type="text" class="form-input" id="stockSearchInput" placeholder="搜索SAP号/物料名称..."
+                            oninput="debouncedStockSearch()">
+                    </div>
+                    <label
+                        style="display: flex; align-items: center; gap: var(--spacing-sm); color: var(--text-secondary);">
+                        <input type="checkbox" id="lowStockOnly" onchange="loadStock()">
+                        仅显示低库存
+                    </label>
+                    <button class="btn btn-secondary" onclick="openLocationConfig()"
+                        style="height: 36px; padding: 0 1rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                        库位配置
+                    </button>
+                </div>
+
+                <div id="traceabilityActionBar" class="traceability-action-bar">
+                    <div class="traceability-action-left">
+                        已选择 <strong id="traceabilitySelectedCount">0</strong> 个物料
+                    </div>
+                    <div class="traceability-action-right">
+                        <button class="btn btn-primary" onclick="openTraceabilityModal()">
+                            📈 查看历史溯源
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportTraceabilityToExcel()">
+                            ⬇ 导出Excel
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearTraceMaterialSelection()">
+                            清空选择
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Traceability Panel (Horizontal Scroll) -->
+                <div id="traceabilityPanel" style="display: none; gap: var(--spacing-md); margin-bottom: var(--spacing-md); overflow-x: auto; padding-bottom: 8px; align-items: flex-start;">
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table class="table" id="inventoryTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"></th>
+                                    <th>图纸/图片</th>
+                                    <th class="sortable" onclick="sortStockTable('sap_code')">SAP号 <span
+                                            class="sort-icon"></span></th>
+                                    <th class="sortable" onclick="sortStockTable('name_cn')">中/越名称 <span
+                                            class="sort-icon"></span></th>
+                                    <th class="sortable" onclick="sortStockTable('location')">库位 <span
+                                            class="sort-icon"></span></th>
+                                    <th class="sortable" onclick="sortStockTable('sap_qty')">SAP数量 <span
+                                            class="sort-icon"></span></th>
+                                    <th class="sortable" onclick="sortStockTable('unrecorded_sap_qty')">未录入SAP <span
+                                            class="sort-icon"></span></th>
+                                    <th class="sortable" onclick="sortStockTable('unrecorded_withdrawn_qty')">未录入已领
+                                        <span class="sort-icon"></span>
+                                    </th>
+                                    <th class="sortable" onclick="sortStockTable('recorded_withdrawn_qty')">已录入已领 <span
+                                            class="sort-icon"></span></th>
+                                    <th class="sortable" onclick="sortStockTable('actual_qty')">实际数量 <span
+                                            class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockBody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center;">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="stockPagination"></div>
+                </div>
+            </div>
+
+            <!-- Inbound Section (待入库看板 / 已收货看板) -->
+            <div id="inboundSection" style="display: none;">
+                <div class="tabs" style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                    <button class="tab-btn active" id="tab_inbound_pending" onclick="switchInboundTab('pending')"
+                        style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 600; color: var(--accent-primary); border-bottom: 3px solid var(--accent-primary);">
+                        📝 待入库看板 (供应商已送货)
+                    </button>
+                    <button class="tab-btn" id="tab_inbound_received" onclick="switchInboundTab('received')"
+                        style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 500; color: var(--text-secondary);">
+                        ✅ 已收货看板 (入库历史)
+                    </button>
+                </div>
+
+                <!-- Pending Inbound View -->
+                <div class="card" id="pendingInboundView">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title" style="display:none;">待入库看板 (供应商已送货)</h3>
+                        <div class="search-box" style="width: 300px; margin-left: auto;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="text" class="form-input" id="pendingInboundSearch"
+                                placeholder="搜索采购单/物料/供应商..." oninput="debouncedSearchPendingInbound()">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>图纸/图片</th>
+                                    <th>送货单 / PO单号</th>
+                                    <th>供应商</th>
+                                    <th>物料 SAP号 / 名称</th>
+                                    <th>需求 / 车间 / 设备</th>
+                                    <th>数量信息</th>
+                                    <th>时间节点</th>
+                                    <th style="text-align: right;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingInboundBody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center;">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="pendingInboundPagination"></div>
+                </div>
+
+                <!-- Received Inbound View -->
+                <div class="card" id="receivedInboundView" style="display: none;">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title" style="display:none;">已收货看板 (入库历史)</h3>
+                        <div style="display: flex; gap: var(--spacing-sm); margin-left: auto; align-items: center; flex-wrap: wrap;">
+                            <select class="form-select" id="receivedSapStatusFilter" onchange="loadReceivedInbound(1)" style="width: 180px;">
+                                <option value="">全部SAP状态</option>
+                                <option value="直接领用">直接领用</option>
+                                <option value="未录入SAP">未录入SAP</option>
+                                <option value="已录入SAP">已录入SAP</option>
+                            </select>
+                            <select class="form-select" id="receivedSupplierFilter" onchange="loadReceivedInbound(1)" style="width: 220px;">
+                                <option value="">全部供应商</option>
+                            </select>
+                            <div class="search-box" style="width: 300px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                                <input type="text" class="form-input" id="receivedInboundSearch"
+                                    placeholder="搜索采购单/物料/供应商..." oninput="debouncedSearchReceivedInbound()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="receivedSelectAll"
+                                            onchange="toggleReceivedSelectAll()"></th>
+                                    <th>SAP状态</th>
+                                    <th>图纸/图片</th>
+                                    <th>送货单 / PO单号</th>
+                                    <th>供应商</th>
+                                    <th>物料 SAP号 / 名称</th>
+                                    <th>到货数量</th>
+                                    <th>收货时间 / 收货人</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receivedInboundBody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center;">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="receivedInboundPagination"></div>
+
+                    <!-- Single Item Return - no batch bar needed -->
+                </div>
+            </div>
+
+            <!-- Outbound Section -->
+            <div id="outboundSection" style="display: none;">
+                <div class="tabs" style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                    <button class="tab-btn active" id="tab_outbound_form" onclick="switchOutboundTab('form')"
+                        style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 600; color: var(--accent-primary); border-bottom: 3px solid var(--accent-primary);">
+                        📝 物料出库
+                    </button>
+                    <button class="tab-btn" id="tab_outbound_history" onclick="switchOutboundTab('history')"
+                        style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 500; color: var(--text-secondary);">
+                        ✅ 出库历史看板
+                    </button>
+                </div>
+
+                <!-- Outbound Form View -->
+                <div class="card" id="outboundFormView">
+                    <h3 class="card-title" style="display:none;">物料出库</h3>
+                    <form id="outboundForm">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                            <div class="form-group">
+                                <label class="form-label">物料 *</label>
+                                <div class="search-dropdown" style="position: relative;">
+                                    <input type="text" class="form-input" id="outboundMaterialSearch"
+                                        placeholder="输入SAP号或名称搜索..." oninput="searchMaterialForOutbound(this.value)">
+                                    <input type="hidden" id="outboundMaterialId">
+                                    <div class="search-results" id="outboundMaterialResults"
+                                        style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); max-height: 200px; overflow-y: auto; z-index: 100; display: none;">
+                                    </div>
+                                </div>
+                                <!-- Material Thumbnail Preview Area (Hidden by default) -->
+                                <div id="outboundMaterialThumbArea"
+                                    style="display: none; margin-top: var(--spacing-md); padding: var(--spacing-sm); background: var(--bg-tertiary); border: 1px dashed var(--border-color); border-radius: var(--radius-md); text-align: center; min-height: 120px; align-items: center; justify-content: center;">
+                                    <div id="outboundMaterialImages"
+                                        style="display: flex; gap: var(--spacing-md); justify-content: center;"></div>
+                                </div>
+                            </div>
+                            <div id="outboundStockInfo" style="display: none;">
+                                <label class="form-label">当前库存情况</label>
+                                <div
+                                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);">
+                                    <div class="stock-card"
+                                        style="grid-column: span 3; background: var(--bg-tertiary); border: 1px solid var(--accent-primary);">
+                                        <div class="stock-value" id="outboundActualQty"
+                                            style="color: var(--accent-primary); font-size: 1.5rem;">-</div>
+                                        <div class="stock-label">实际可用数量</div>
+                                    </div>
+                                    <div class="stock-card">
+                                        <div class="stock-value" id="outboundSapQty">-</div>
+                                        <div class="stock-label">SAP账面数</div>
+                                    </div>
+                                    <div class="stock-card">
+                                        <div class="stock-value" id="outboundUnrecSapQty">-</div>
+                                        <div class="stock-label">未录入SAP数</div>
+                                    </div>
+                                    <div class="stock-card">
+                                        <div class="stock-value" id="outboundUnrecWithQty">-</div>
+                                        <div class="stock-label">未录先领数</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">出库账目 *</label>
+                                <select class="form-select" id="outboundSapStatus" required>
+                                    <option value="未录入">未录先领的出库</option>
+                                    <option value="已录入">SAP账面的出库</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">是否有处理收据 *</label>
+                                <select class="form-select" id="outboundReceipt" required>
+                                    <option value="否">否</option>
+                                    <option value="是">是</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">出库时间 *</label>
+                                <input type="datetime-local" class="form-input" id="outboundDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">出库数量 *</label>
+                                <input type="number" class="form-input" id="outboundQty" min="1" required>
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label class="form-label">领用人 *</label>
+                                <input type="text" class="form-input" id="outboundPerson" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">备注</label>
+                            <textarea class="form-textarea" id="outboundNotes" rows="2"></textarea>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="submitOutbound()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
+                            确认出库
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Outbound History View -->
+                <div class="card" id="outboundHistoryView" style="display: none;">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title" style="display:none;">出库历史看板</h3>
+                        <div class="search-box" style="width: 300px; margin-left: auto;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="text" class="form-input" id="historyOutboundSearch" placeholder="搜索物料/领用人..."
+                                oninput="debouncedSearchOutboundHistory()">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>出库时间</th>
+                                    <th>图纸/图片</th>
+                                    <th>物料 SAP号 / 名称</th>
+                                    <th>出库数量</th>
+                                    <th>领用人</th>
+                                    <th>出库账目</th>
+                                    <th>处理收据</th>
+                                    <th>备注/说明</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outboundHistoryBody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center;">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="outboundHistoryPagination"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Location Configuration Modal -->
+    <div class="modal-overlay" id="locationConfigModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>库位配置管理</h3>
+                <button class="btn btn-icon" onclick="closeModal('locationConfigModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                    <input type="text" id="newLocationName" class="form-input" placeholder="输入新库位名称 (如 A层01架)">
+                    <button class="btn btn-primary" onclick="addLocationConfig()"
+                        style="white-space: nowrap;">添加库位</button>
+                </div>
+
+                <div
+                    style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); max-height: 300px; overflow-y: auto;">
+                    <table class="table" style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th>库位名称</th>
+                                <th style="width: 80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationConfigList">
+                            <tr>
+                                <td colspan="2" style="text-align:center;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inbound Confirm Modal -->
+    <div class="modal-overlay" id="inboundConfirmModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>入库确认</h3>
+                <button class="btn btn-icon" onclick="closeModal('inboundConfirmModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="inboundConfirmForm">
+                    <input type="hidden" id="inboundConfirmItemId">
+                    <div class="form-group">
+                        <label class="form-label">供应商发货数量</label>
+                        <input type="text" id="inboundConfirmExpectedQty" class="form-input" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">实际清点数量 *</label>
+                        <input type="number" id="inboundConfirmActualQty" class="form-input" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">仓库收货时间 *</label>
+                        <input type="datetime-local" id="inboundConfirmDate" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">入库类型 *</label>
+                        <select id="inboundConfirmSapStatus" class="form-select" required
+                            onchange="toggleDirectUseFields()">
+                            <option value="未录入SAP" selected>放入库存 (暂不录入SAP)</option>
+                            <option value="已录入SAP">放入库存 (已同步录入SAP)</option>
+                            <option value="直接领用">直接领用 (不计入库存)</option>
+                        </select>
+                    </div>
+                    <!-- Direct-use fields (shown when '直接领用' selected) -->
+                    <div id="directUseFields"
+                        style="display:none; border: 1px dashed var(--accent-primary); border-radius: var(--radius-md); padding: var(--spacing-md); margin-top: var(--spacing-sm); background: rgba(56,189,248,0.05);">
+                        <div style="font-weight:600; color:var(--accent-primary); margin-bottom:var(--spacing-sm);">📦
+                            直接领用信息</div>
+                        <div class="form-group">
+                            <label class="form-label">领用车间 *</label>
+                            <select id="directUseWorkshop" class="form-select">
+                                <option value="">请选择车间</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">领用人 *</label>
+                            <input type="text" id="directUsePerson" class="form-input" placeholder="输入领用人姓名">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">现场照片证据</label>
+                            <input type="file" id="directUsePhoto" class="form-input" accept="image/*"
+                                style="padding:0.5rem;">
+                            <small style="color:var(--text-muted);">可选，拍照上传领用现场照片</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备忘及要求补充说明</label>
+                        <textarea id="inboundConfirmNotes" class="form-input" rows="2"
+                            placeholder="可选填入库备注..."></textarea>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="closeModal('inboundConfirmModal')">取消</button>
+                        <button type="submit" class="btn btn-primary" style="background: var(--color-success);">
+                            确认入库 进场
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Item Modal -->
+    <div class="modal-overlay" id="returnItemModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="color: var(--color-danger);">退回不良物料</h3>
+                <button class="btn btn-icon" onclick="closeModal('returnItemModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="returnItemForm">
+                    <input type="hidden" id="returnItemId">
+                    <div
+                        style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: rgba(239,68,68,0.1); border-radius: var(--radius-md); border: 1px solid rgba(239,68,68,0.2);">
+                        <p style="color: var(--color-danger); font-weight: 500;">警告：此操作将锁定此物品的入库环节，退回单据并直接通知供应商要求重新送货。
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">退货数量 *</label>
+                        <input type="number" id="returnItemQty" class="form-input" min="1" required
+                            placeholder="输入退货数量">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">退货详细原因及处理意见 *</label>
+                        <textarea id="returnItemReason" class="form-input" rows="4" required
+                            placeholder="请详细填写物料问题：例如尺寸不对、存在划痕、缺少配件等... 供应商在重新送货时将必须回应此信息。"></textarea>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="closeModal('returnItemModal')">取消</button>
+                        <button type="submit" class="btn btn-primary" style="background: var(--color-danger);">
+                            确定退货 驳回单据
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Received Inbound Return Modal -->
+    <div class="modal-overlay" id="receivedReturnModal">
+        <div class="modal" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🔄 入库后退货</h3>
+                <button class="modal-close" onclick="closeModal('receivedReturnModal')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="receivedReturnForm">
+                    <div
+                        style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: rgba(239,68,68,0.1); border-radius: var(--radius-md); border: 1px solid rgba(239,68,68,0.2);">
+                        <p style="color: var(--color-danger); font-weight: 500;">
+                            警告：此操作将将已入库物料退回供应商，同时扣减库存数量。供应商将在门户的「退货处理」标签页中看到退货通知。</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">退货数量 *</label>
+                        <input type="number" id="receivedReturnQty" class="form-input" min="1" required
+                            placeholder="输入退货数量">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">退货详细原因及处理意见 *</label>
+                        <textarea id="receivedReturnReason" class="form-input" rows="4" required
+                            placeholder="请详细填写物料问题：例如尺寸不对、存在划痕、缺少配件等..."></textarea>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="closeModal('receivedReturnModal')">取消</button>
+                        <button type="submit" class="btn btn-primary"
+                            style="background: var(--color-danger);">确定退货</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content" id="lightboxContent"></div>
+    </div>
+
+    <!-- Traceability Modal -->
+    <div class="modal-overlay" id="traceabilityModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>多物料历史溯源</h3>
+                <button class="btn btn-icon" onclick="closeModal('traceabilityModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--spacing-md); gap: var(--spacing-sm); flex-wrap:wrap;">
+                    <div style="color: var(--text-secondary);">
+                        当前展示 <strong id="traceabilityModalCount">0</strong> 个物料
+                    </div>
+                    <div style="display:flex; gap: var(--spacing-sm);">
+                        <button class="btn btn-secondary" onclick="exportTraceabilityToExcel()">导出Excel</button>
+                    </div>
+                </div>
+                <div id="traceabilityModalPanel">
+                    <div style="color: var(--text-muted);">暂无数据</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        window.locationOptions = [];
+
+        // Initial setup
+        async function initWarehouse() {
+            await loadLocationOptions();
+
+            // Restore last active tab from localStorage
+            const savedTab = localStorage.getItem('warehouseTab');
+            if (savedTab && ['stock', 'inbound', 'outbound'].includes(savedTab)) {
+                switchTab(savedTab);
+            } else {
+                await loadStock(1);
+            }
+
+            // Check admin status
+            api.get('/auth/users/me').then(user => {
+                if (user && user.role === 'admin') {
+                    document.querySelectorAll('.js-admin-only').forEach(el => el.style.display = 'inline-flex');
+                }
+            }).catch(e => console.warn(e));
+        }
+
+        const debouncedStockSearch = debounce(() => loadStock(), 300);
+        let currentPOData = null;
+
+        // Set default datetime
+        document.getElementById('outboundDate').value = new Date().toISOString().slice(0, 16);
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.action-tab').forEach(t => t.classList.remove('active'));
+            if (btn) {
+                btn.classList.add('active');
+            } else {
+                // Find the button by tab name when restoring from localStorage
+                document.querySelectorAll('.action-tab').forEach(t => {
+                    if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${tab}'`)) {
+                        t.classList.add('active');
+                    }
+                });
+            }
+
+            document.getElementById('stockSection').style.display = tab === 'stock' ? 'block' : 'none';
+            document.getElementById('inboundSection').style.display = tab === 'inbound' ? 'block' : 'none';
+            document.getElementById('outboundSection').style.display = tab === 'outbound' ? 'block' : 'none';
+
+            if (tab === 'stock') loadStock();
+            if (tab === 'inbound') loadPendingInbound(1);
+
+            // Remember active tab across navigation
+            localStorage.setItem('warehouseTab', tab);
+        }
+
+        let stockSort = { field: null, order: 'desc' };
+
+        function sortStockTable(field) {
+            if (stockSort.field === field) {
+                stockSort.order = stockSort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                stockSort.field = field;
+                stockSort.order = 'asc';
+            }
+
+            // Update sort icon classes
+            document.querySelectorAll('#stockSection th.sortable').forEach(th => {
+                th.classList.remove('asc', 'desc');
+                if (th.getAttribute('onclick').includes(`'${field}'`)) {
+                    th.classList.add(stockSort.order);
+                }
+            });
+
+            // Reload on page 1
+            loadStock(1);
+        }
+
+        let selectedTraceMaterials = new Set();
+        let currentStockPage = 1;
+        let traceabilityCache = [];
+        
+        async function loadStock(page = 1) {
+            currentStockPage = page;
+            const search = document.getElementById('stockSearchInput').value;
+            const lowStockOnly = document.getElementById('lowStockOnly').checked;
+
+            const tbody = document.getElementById('stockBody');
+
+            try {
+                let url = `/warehouse/stock?skip=${(page - 1) * 20}&limit=20`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (lowStockOnly) url += `&low_stock=true`;
+                if (stockSort.field) {
+                    url += `&sort_by=${stockSort.field}&sort_order=${stockSort.order}`;
+                }
+
+                const data = await api.get(url);
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">暂无库存数据</td></tr>';
+                } else {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentLang = urlParams.get('lang') || localStorage.getItem('lang') || 'cn';
+
+                    // Sort so that selected items are pinned at the top
+                    const sortedItems = [...data.items].sort((a, b) => {
+                        const aSel = selectedTraceMaterials.has(a.material_id) ? 1 : 0;
+                        const bSel = selectedTraceMaterials.has(b.material_id) ? 1 : 0;
+                        return bSel - aSel;
+                    });
+
+                    tbody.innerHTML = sortedItems.map(s => {
+                        const displayName = currentLang === 'vn' && s.material.name_vn ? s.material.name_vn : s.material.name_cn;
+                        const isSelected = selectedTraceMaterials.has(s.material_id);
+                        return `
+                        <tr style="${isSelected ? 'background: rgba(59, 130, 246, 0.05);' : ''}">
+                            <td>
+                                <input type="checkbox" onchange="toggleTraceMaterial(${s.material_id})" ${isSelected ? 'checked' : ''}>
+                            </td>
+                            <td>
+                                <div class="material-thumb">
+                                    ${s.material.image
+                                ? `<img src="${s.material.image}" class="thumb-item" onclick="openLightbox('${s.material.image}', 'image')" title="点击查看大图">`
+                                : ''}
+                                    ${s.material.drawing_pdf
+                                ? `<div class="pdf-mini" onclick="openLightbox('${s.material.drawing_pdf}', 'pdf')" title="点击查看PDF图纸"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`
+                                : ''}
+                                    ${!s.material.image && !s.material.drawing_pdf ? '<span style="color:var(--text-muted);font-size:0.8rem;">-</span>' : ''}
+                                </div>
+                            </td>
+                            <td><strong>${s.material.sap_code}</strong></td>
+                            <td>
+                                ${displayName}
+                                ${currentLang === 'cn' && s.material.name_vn ? `<div style="font-size:0.75em;color:var(--text-muted)">${s.material.name_vn}</div>` : ''}
+                                ${currentLang === 'vn' ? `<div style="font-size:0.75em;color:var(--text-muted)">${s.material.name_cn}</div>` : ''}
+                            </td>
+                            <td>
+                                <select class="form-select inline-location-select" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; width: 120px;" onchange="updateLocationInline(${s.material_id}, this.value)">
+                                    <option value="">-空-</option>
+                                    ${window.locationOptions.map(loc => `<option value="${loc}" ${s.location === loc ? 'selected' : ''}>${loc}</option>`).join('')}
+                                </select>
+                            </td>
+                            <td>${s.sap_qty}</td>
+                            <td>${s.unrecorded_sap_qty}</td>
+                            <td>${s.unrecorded_withdrawn_qty}</td>
+                            <td>${s.recorded_withdrawn_qty}</td>
+                            <td>
+                                <span style="font-size: 1.25rem; font-weight: 700; color: ${s.actual_qty <= (s.material.min_stock || 0) ? 'var(--color-danger)' : 'var(--accent-primary)'};">
+                                    ${s.actual_qty}
+                                </span>
+                                ${s.actual_qty <= (s.material.min_stock || 0) ? '<span class="badge badge-danger pulse" style="margin-left: 4px;">低</span>' : ''}
+                            </td>
+                        </tr>
+                    `}).join('');
+                }
+
+                renderPagination(data.total, page, 20, document.getElementById('stockPagination'), 'loadStock');
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        async function toggleTraceMaterial(materialId) {
+            if (selectedTraceMaterials.has(materialId)) {
+                selectedTraceMaterials.delete(materialId);
+            } else {
+                selectedTraceMaterials.add(materialId);
+            }
+            loadStock(currentStockPage); // Re-render to sort pinned items
+            updateTraceabilityActions();
+        }
+
+        function updateTraceabilityActions() {
+            const count = selectedTraceMaterials.size;
+            const bar = document.getElementById('traceabilityActionBar');
+            const countNode = document.getElementById('traceabilitySelectedCount');
+            countNode.textContent = String(count);
+            bar.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        function clearTraceMaterialSelection() {
+            selectedTraceMaterials.clear();
+            traceabilityCache = [];
+            updateTraceabilityActions();
+            loadStock(currentStockPage);
+            const panel = document.getElementById('traceabilityPanel');
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+        }
+
+        async function fetchTraceabilityData() {
+            if (selectedTraceMaterials.size === 0) {
+                return [];
+            }
+            const response = await api.post('/warehouse/traceability', {
+                material_ids: Array.from(selectedTraceMaterials)
+            });
+            return response.data || [];
+        }
+
+        function renderTraceabilityCards(materials) {
+            return materials.map(mat => {
+                    let html = `<div class="card" style="min-width: 350px; margin-bottom: 0;">
+                        <div class="card-header" style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                            <h4 style="margin:0; font-size:1rem;">${mat.sap_code} - ${mat.name_cn}</h4>
+                        </div>
+                        <div class="card-body" style="padding: 1rem; max-height: 400px; overflow-y: auto;">`;
+                    
+                    if (mat.inbound_history.length === 0 && mat.outbound_history.length === 0) {
+                        html += '<div style="color:var(--text-muted); font-size:0.9rem;">暂无历史记录</div>';
+                    } else {
+                        // Inbound history timeline
+                        mat.inbound_history.forEach(history => {
+                            html += `<div style="border-left: 2px solid var(--accent-primary); padding-left: 1rem; margin-bottom: 1.5rem; position: relative;">
+                                <div style="position: absolute; left: -6px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-primary);"></div>
+                                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--accent-primary);">
+                                    采购单: ${history.po_number || '-'} 
+                                    <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(${history.supplier_name})</span>
+                                </div>`;
+                            
+                            if (history.events && history.events.length > 0) {
+                                history.events.forEach(ev => {
+                                    let color = "var(--text-secondary)";
+                                    let icon = "🔹";
+                                    if (ev.action.includes("确认")) { color = "var(--accent-primary)"; icon = "✅"; }
+                                    else if (ev.action.includes("送货") || ev.action.includes("补货")) { color = "var(--color-warning)"; icon = "🚚"; }
+                                    else if (ev.action.includes("收货")) { color = "var(--color-success)"; icon = "📦"; }
+                                    else if (ev.action.includes("退货")) { color = "var(--color-danger)"; icon = "❌"; }
+                                    
+                                    const normalizedDetail = (ev.detail || '').trim();
+                                    const showDetail = normalizedDetail && normalizedDetail !== '基于老数据构造';
+
+                                    html += `<div style="font-size: 0.85rem; margin-bottom: 0.4rem; background: var(--bg-primary); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border-color);">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                                            <strong style="color: ${color};">${icon} ${ev.action}</strong>
+                                            <span style="color: var(--text-muted); font-size: 0.75rem;">${formatDate(ev.time)}</span>
+                                        </div>
+                                        <div style="color: var(--text-secondary);">
+                                            操作人: ${ev.operator || '-'} <span style="margin: 0 4px;">|</span> 
+                                            数量: <strong style="color:var(--text-primary)">${ev.quantity !== null ? ev.quantity : '-'}</strong>
+                                        </div>
+                                        ${showDetail ? `<div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 2px;">备注: ${normalizedDetail}</div>` : ''}
+                                    </div>`;
+                                });
+                            } else {
+                                html += `<div style="font-size: 0.85rem; color: var(--text-muted);">暂无操作记录</div>`;
+                            }
+                            
+                            html += `</div>`;
+                        });
+                        
+                        // Outbound history timeline
+                        if (mat.outbound_history.length > 0) {
+                            html += `<div style="margin-top: 1rem; font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">出库记录</div>`;
+                            mat.outbound_history.forEach(out => {
+                                html += `<div style="border-left: 2px solid var(--color-warning); padding-left: 1rem; margin-bottom: 0.8rem; position: relative;">
+                                    <div style="position: absolute; left: -6px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--color-warning);"></div>
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                        <strong>&bull; 出库时间:</strong> ${formatDate(out.outbound_date)}<br>
+                                        <strong>&bull; 数量:</strong> <span style="color:var(--color-danger)">-${out.quantity}</span><br>
+                                        <strong>&bull; 领用人:</strong> ${out.withdraw_person || '-'}
+                                    </div>
+                                </div>`;
+                            });
+                        }
+                    }
+                    html += `</div></div>`;
+                    return html;
+                }).join('');
+        }
+
+        async function openTraceabilityModal() {
+            if (selectedTraceMaterials.size === 0) {
+                showToast('请先选择至少一个物料', 'warning');
+                return;
+            }
+
+            const panel = document.getElementById('traceabilityModalPanel');
+            panel.innerHTML = '<div style="padding:1rem; color: var(--text-muted);">正在加载追溯数据...</div>';
+            document.getElementById('traceabilityModalCount').textContent = String(selectedTraceMaterials.size);
+            openModal('traceabilityModal');
+
+            try {
+                traceabilityCache = await fetchTraceabilityData();
+                if (traceabilityCache.length === 0) {
+                    panel.innerHTML = '<div style="padding:1rem; color: var(--text-muted);">暂无历史记录</div>';
+                    return;
+                }
+                panel.innerHTML = renderTraceabilityCards(traceabilityCache);
+            } catch (error) {
+                panel.innerHTML = `<div style="color:var(--color-danger); padding:1rem;">加载追溯数据失败: ${error.message}</div>`;
+            }
+        }
+
+        function exportTraceabilityToExcel() {
+            if (!traceabilityCache || traceabilityCache.length === 0) {
+                showToast('请先点击“查看历史溯源”加载数据后再导出', 'warning');
+                return;
+            }
+
+            const headers = [
+                'SAP号', '物料名称', '记录类型', 'PO号', '供应商', '动作', '时间', '操作人', '数量', '详情', '领用人'
+            ];
+
+            const esc = (val) => {
+                const str = String(val ?? '').replace(/"/g, '""');
+                return `"${str}"`;
+            };
+
+            const rows = [];
+            traceabilityCache.forEach(mat => {
+                (mat.inbound_history || []).forEach(history => {
+                    const base = [mat.sap_code || '', mat.name_cn || '', '入库链路', history.po_number || '', history.supplier_name || ''];
+                    const events = history.events || [];
+                    if (events.length === 0) {
+                        rows.push([...base, '', '', '', '', '', '']);
+                    } else {
+                        events.forEach(ev => {
+                            const exportDetail = (ev.detail || '').trim() === '基于老数据构造' ? '' : (ev.detail || '');
+                            rows.push([
+                                ...base,
+                                ev.action || '',
+                                ev.time ? formatDate(ev.time, true) : '',
+                                ev.operator || '',
+                                ev.quantity ?? '',
+                                exportDetail,
+                                ''
+                            ]);
+                        });
+                    }
+                });
+
+                (mat.outbound_history || []).forEach(out => {
+                    rows.push([
+                        mat.sap_code || '',
+                        mat.name_cn || '',
+                        '出库',
+                        '',
+                        '',
+                        '出库',
+                        out.outbound_date ? formatDate(out.outbound_date, true) : '',
+                        '',
+                        out.quantity ?? '',
+                        '',
+                        out.withdraw_person || ''
+                    ]);
+                });
+            });
+
+            if (rows.length === 0) {
+                showToast('没有可导出的数据', 'warning');
+                return;
+            }
+
+            let csv = '\ufeff' + headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(esc).join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `仓库多物料溯源_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
+            showToast(`导出成功，共 ${rows.length} 条记录`, 'success');
+        }
+
+
+        // --- Inbound Tabs Switching ---
+        function switchInboundTab(tab) {
+            document.querySelectorAll('#inboundSection .tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.color = 'var(--text-secondary)';
+                btn.style.fontWeight = '500';
+                btn.style.borderBottom = 'none';
+            });
+            const activeBtn = document.getElementById('tab_inbound_' + tab);
+            activeBtn.classList.add('active');
+            activeBtn.style.color = 'var(--accent-primary)';
+            activeBtn.style.fontWeight = '600';
+            activeBtn.style.borderBottom = '3px solid var(--accent-primary)';
+
+            if (tab === 'pending') {
+                document.getElementById('pendingInboundView').style.display = 'block';
+                document.getElementById('receivedInboundView').style.display = 'none';
+                loadPendingInbound(1);
+            } else {
+                document.getElementById('pendingInboundView').style.display = 'none';
+                document.getElementById('receivedInboundView').style.display = 'block';
+                loadReceivedInbound(1);
+            }
+        }
+
+        // --- Received Inbound Logic ---
+        const debouncedSearchReceivedInbound = debounce(() => loadReceivedInbound(1), 300);
+
+        async function loadReceivedInbound(page = 1) {
+            const search = document.getElementById('receivedInboundSearch').value;
+            const tbody = document.getElementById('receivedInboundBody');
+
+            try {
+                let url = `/warehouse/received-inbound?skip=${(page - 1) * 20}&limit=20`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                showLoading(tbody);
+                const data = await api.get(url);
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">暂无已收货记录</td></tr>';
+                } else {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentLang = urlParams.get('lang') || localStorage.getItem('lang') || 'cn';
+
+                    tbody.innerHTML = data.items.map(item => {
+                        const displayName = currentLang === 'cn' ? item.material.name_cn : (item.material.name_vn || item.material.name_cn);
+
+                        let sapBadgeStr = '';
+                        if (item.sap_status === '未录入SAP') sapBadgeStr = `<button class="btn btn-warning" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor:pointer;" onclick="updateSapStatus(${item.id})">未录入SAP → 录入</button>`;
+                        else if (item.sap_status === '已录入SAP') sapBadgeStr = '<span class="badge badge-success">已录入SAP</span>';
+                        else if (item.sap_status === '直接领用') sapBadgeStr = '<span class="badge badge-info">直接领用</span>';
+                        else sapBadgeStr = `<span class="badge badge-neutral">${item.sap_status || '-'}</span>`;
+
+                        // Direct use info row
+                        let directUseInfo = '';
+                        if (item.sap_status === '直接领用') {
+                            directUseInfo = `<tr style="background: var(--bg-tertiary);">
+                                <td colspan="8" style="padding: 0.4rem 1rem; font-size: 0.82em; color: var(--text-secondary);">
+                                    <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                                        <span>👤 领用人: <strong>${item.direct_use_person || '-'}</strong></span>
+                                        <span>🏭 领用车间: <strong>${item.direct_use_workshop || '-'}</strong></span>
+                                        ${item.direct_use_photo ? `<a href="javascript:void(0)" onclick="openLightbox('${item.direct_use_photo}', 'image')" style="color: var(--accent-primary); text-decoration: underline;">📷 查看领用照片</a>` : ''}
+                                    </div>
+                                </td>
+                            </tr>`;
+                        }
+
+                        return `
+                        <tr>
+                            <td></td>
+                            <td>
+                                <div class="material-thumb">
+                                    ${item.material.image
+                                ? `<img src="${item.material.image}" class="thumb-item" onclick="openLightbox('${item.material.image}', 'image')">`
+                                : '<span style="color:var(--text-muted);font-size:0.8rem;">无图</span>'}
+                                </div>
+                            </td>
+                            <td>
+                                <div><span class="badge badge-info mb-1">${item.po_number}</span></div>
+                            </td>
+                            <td>${item.supplier_name || '-'}</td>
+                            <td style="max-width: 250px; word-wrap: break-word;">
+                                <strong>${item.material.sap_code}</strong>
+                                <div style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.3;">${displayName}</div>
+                            </td>
+                            <td><strong style="color:var(--color-success);font-size:1.1em;">+${item.received_qty}</strong></td>
+                            <td>
+                                <div style="font-size: 0.85em;">
+                                    <div>时间: ${item.warehouse_receive_time ? formatDate(item.warehouse_receive_time, true) : '-'}</div>
+                                    <div style="color:var(--text-secondary)">收货人: ${item.receiver || '-'}</div>
+                                </div>
+                            </td>
+                            <td>${sapBadgeStr}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.8rem; color: var(--color-danger); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05);" onclick="openReceivedReturnModal(${item.id}, ${item.received_qty})">
+                                    🔄 退货
+                                </button>
+                            </td>
+                        </tr>
+                        ${directUseInfo}
+                        `;
+                    }).join('');
+                }
+
+                renderPagination(data.total, page, 20, document.getElementById('receivedInboundPagination'), 'loadReceivedInbound');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">加载失败: ${error.message}</td></tr>`;
+                showToast('已收货数据加载失败', 'error');
+            }
+        }
+
+        async function updateSapStatus(recordId) {
+            if (!confirm('确认将此记录标记为"已录入SAP"？')) return;
+            try {
+                await api.put(`/warehouse/inbound/${recordId}/sap-status`);
+                showToast('SAP状态已更新');
+                loadReceivedInbound();
+            } catch (error) {
+                showToast('更新失败: ' + error.message, 'error');
+            }
+        }
+
+        // --- Received Inbound Selection & Return ---
+        const receivedSelectedIds = new Set();
+
+        function updateReceivedSelection() {
+            receivedSelectedIds.clear();
+            document.querySelectorAll('.received-cb:checked').forEach(cb => {
+                receivedSelectedIds.add(parseInt(cb.dataset.id));
+            });
+            const bar = document.getElementById('receivedReturnBar');
+            const count = receivedSelectedIds.size;
+            document.getElementById('receivedSelectedCount').textContent = count;
+            bar.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        function toggleReceivedSelectAll() {
+            const all = document.getElementById('receivedSelectAll').checked;
+            document.querySelectorAll('.received-cb').forEach(cb => {
+                cb.checked = all;
+            });
+            updateReceivedSelection();
+        }
+
+        function clearReceivedSelection() {
+            receivedSelectedIds.clear();
+            document.querySelectorAll('.received-cb').forEach(cb => cb.checked = false);
+            document.getElementById('receivedSelectAll').checked = false;
+            document.getElementById('receivedReturnBar').style.display = 'none';
+        }
+
+        let currentReturnInboundId = null;
+        let currentReturnMaxQty = 0;
+
+        function openReceivedReturnModal(inboundId, receivedQty) {
+            currentReturnInboundId = inboundId;
+            currentReturnMaxQty = receivedQty;
+            document.getElementById('receivedReturnReason').value = '';
+            const qtyInput = document.getElementById('receivedReturnQty');
+            qtyInput.value = '';
+            qtyInput.max = receivedQty;
+            qtyInput.placeholder = `最大 ${receivedQty}`;
+            openModal('receivedReturnModal');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('receivedReturnForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const reason = document.getElementById('receivedReturnReason').value.trim();
+                const returnQty = parseInt(document.getElementById('receivedReturnQty').value);
+                if (!returnQty || returnQty <= 0) {
+                    showToast('请填写退货数量', 'warning');
+                    return;
+                }
+                if (returnQty > currentReturnMaxQty) {
+                    showToast(`退货数量不能超过收货数量 ${currentReturnMaxQty}`, 'warning');
+                    return;
+                }
+                if (!reason) {
+                    showToast('请填写退货原因', 'warning');
+                    return;
+                }
+                const confirmed = await confirmDialog(`确认要退回该入库记录中的 ${returnQty} 个吗？库存将相应扣减。`);
+                if (!confirmed) return;
+
+                try {
+                    await api.post('/warehouse/return-inbound', {
+                        inbound_ids: [currentReturnInboundId],
+                        return_reason: reason,
+                        return_qty: returnQty
+                    });
+                    showToast('退货成功，已通知供应商', 'success');
+                    closeModal('receivedReturnModal');
+                    loadReceivedInbound(1);
+                } catch (error) {
+                    showToast(`退货失败: ${error.message}`, 'error');
+                }
+            });
+        });
+
+        // --- Pending Inbound & Returns Logic ---
+        const debouncedSearchPendingInbound = debounce(() => loadPendingInbound(1), 300);
+
+        async function loadPendingInbound(page = 1) {
+            const search = document.getElementById('pendingInboundSearch').value;
+            const tbody = document.getElementById('pendingInboundBody');
+
+            try {
+                let url = `/warehouse/pending-inbound?skip=${(page - 1) * 20}&limit=20`;
+                if (search) url += `&search=${encodeURIComponent(search)}`; // Ensure endpoint handles ?search
+
+                showLoading(tbody);
+                const data = await api.get(url);
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">暂无待入库数据</td></tr>';
+                } else {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentLang = urlParams.get('lang') || localStorage.getItem('lang') || 'cn';
+
+                    tbody.innerHTML = data.items.map(item => {
+                        const displayName = currentLang === 'cn' ? item.material.name_cn : (item.material.name_vn || item.material.name_cn);
+
+                        return `
+                        <tr>
+                            <td>
+                                <div class="material-thumb">
+                                    ${item.material.image
+                                ? `<img src="${item.material.image}" class="thumb-item" onclick="openLightbox('${item.material.image}', 'image')" title="点击查看大幅图纸">`
+                                : '<span style="color:var(--text-muted);font-size:0.8rem;">无图</span>'}
+                                    ${item.material.drawing_pdf
+                                ? `<div class="pdf-mini" onclick="openLightbox('${item.material.drawing_pdf}', 'pdf')" title="查阅PDF图纸"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`
+                                : ''}
+                                </div>
+                            </td>
+                            <td>
+                                <div><span class="badge badge-info mb-1">${item.po_number}</span></div>
+                            </td>
+                            <td>${item.supplier_name || '-'}</td>
+                            <td style="max-width: 250px; word-wrap: break-word;">
+                                <strong>${item.material.sap_code}</strong>
+                                <div style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.3;">${displayName}</div>
+                            </td>
+                            <td>
+                                ${item.workshop ? `车间: ${item.workshop}<br>` : ''}
+                                ${item.equipment ? `设备: ${item.equipment}<br>` : ''}
+                                ${item.notes ? `备注: <span style="color:var(--text-secondary)">${item.notes}</span>` : ''}
+                            </td>
+                            <td>
+                                <div>订购: <strong>${item.ordered_qty}</strong></div>
+                                ${item.pending_return_qty > 0 ? `<div style="color:var(--color-danger);">退货中: <strong>-${item.pending_return_qty}</strong></div>` : ''}
+                                <div>可收: <strong style="color:var(--accent-primary);font-size:1.1em;">${item.remaining_qty}</strong></div>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.85em;">
+                                    <div>要求到货: ${item.required_date ? formatDate(item.required_date) : '-'}</div>
+                                    <div style="color:var(--color-success)">供应商送货: ${item.actual_delivery_date ? formatDate(item.actual_delivery_date) : '-'}</div>
+                                </div>
+                            </td>
+                            <td style="text-align: right; white-space: nowrap; width: 150px;">
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-primary btn-sm" onclick="openInboundConfirmModal(${item.id}, ${item.remaining_qty}, '${item.workshop || ''}')" style="padding: 4px 8px; justify-content:center; flex: 1;">
+                                        查验入库 <svg width="14" height="14" style="margin-left:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="openReturnItemModal(${item.id})" style="padding: 4px 8px; justify-content:center; color: var(--color-danger); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); flex: 1;">
+                                        退货发回 <svg width="14" height="14" style="margin-left:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        `;
+                    }).join('');
+                }
+
+                renderPagination(data.total, page, 20, document.getElementById('pendingInboundPagination'), 'loadPendingInbound');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">加载失败: ${error.message}</td></tr>`;
+                showToast('待入库数据加载失败', 'error');
+            }
+        }
+
+        // --- Inbound Confirm ---
+        function openInboundConfirmModal(itemId, expectedQty, defaultWorkshop) {
+            document.getElementById('inboundConfirmItemId').value = itemId;
+            document.getElementById('inboundConfirmExpectedQty').value = expectedQty;
+            document.getElementById('inboundConfirmActualQty').value = expectedQty; // Default to expected
+            document.getElementById('inboundConfirmActualQty').max = expectedQty;
+
+            // Set current time truncated to minutes (local time format)
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('inboundConfirmDate').value = now.toISOString().slice(0, 16);
+
+            document.getElementById('inboundConfirmNotes').value = '';
+            document.getElementById('inboundConfirmSapStatus').value = '未录入SAP';
+
+            // Reset direct-use fields
+            document.getElementById('directUseFields').style.display = 'none';
+            document.getElementById('directUsePerson').value = '';
+            const photoInput = document.getElementById('directUsePhoto');
+            if (photoInput) photoInput.value = '';
+
+            // Load workshop options and set default
+            loadWorkshopsForDirectUse(defaultWorkshop);
+
+            openModal('inboundConfirmModal');
+        }
+
+        function toggleDirectUseFields() {
+            const sapStatus = document.getElementById('inboundConfirmSapStatus').value;
+            document.getElementById('directUseFields').style.display = sapStatus === '直接领用' ? 'block' : 'none';
+        }
+
+        async function loadWorkshopsForDirectUse(defaultWorkshop) {
+            try {
+                const result = await api.get('/config/workshop');
+                const select = document.getElementById('directUseWorkshop');
+                select.innerHTML = '<option value="">请选择车间</option>';
+                (result || []).forEach(w => {
+                    const name = w.value || w.name || w;
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    if (defaultWorkshop && name === defaultWorkshop) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.warn('Failed to load workshops:', e);
+            }
+        }
+
+        document.getElementById('inboundConfirmForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const itemId = document.getElementById('inboundConfirmItemId').value;
+            const actualQty = parseInt(document.getElementById('inboundConfirmActualQty').value);
+            const receiveDateLocal = document.getElementById('inboundConfirmDate').value;
+            const sapStatus = document.getElementById('inboundConfirmSapStatus').value;
+            const notes = document.getElementById('inboundConfirmNotes').value;
+
+            // Direct-use validation
+            let directUseWorkshop = null;
+            let directUsePerson = null;
+            if (sapStatus === '直接领用') {
+                directUseWorkshop = document.getElementById('directUseWorkshop').value;
+                directUsePerson = document.getElementById('directUsePerson').value.trim();
+                if (!directUseWorkshop || !directUsePerson) {
+                    showToast('请填写领用车间和领用人', 'warning');
+                    return;
+                }
+            }
+
+            // Generate Date object from local, send as ISO string (UTC)
+            let receiveTimeStr = new Date().toISOString();
+            if (receiveDateLocal) {
+                receiveTimeStr = new Date(receiveDateLocal).toISOString();
+            }
+
+            try {
+                // Determine receiver from current logged-in user or prompt if blank
+                let userObj = {};
+                try {
+                    userObj = await api.get('/auth/users/me');
+                } catch (e) { }
+                const receiverName = userObj.full_name || userObj.username || '仓库管理员';
+
+                const result = await api.post(`/warehouse/inbound/${itemId}`, {
+                    warehouse_receive_time: receiveTimeStr,
+                    received_qty: actualQty,
+                    sap_status: sapStatus,
+                    receiver: receiverName,
+                    notes: notes || undefined,
+                    direct_use_workshop: directUseWorkshop,
+                    direct_use_person: directUsePerson
+                });
+
+                // Upload photo if direct-use and file selected
+                if (sapStatus === '直接领用' && result.inbound_id) {
+                    const photoFile = document.getElementById('directUsePhoto').files[0];
+                    if (photoFile) {
+                        const formData = new FormData();
+                        formData.append('file', photoFile);
+                        try {
+                            await api.upload(`/warehouse/inbound/${result.inbound_id}/photo/upload`, formData);
+                        } catch (photoErr) {
+                            console.warn('Photo upload failed:', photoErr);
+                        }
+                    }
+                }
+
+                showToast('已成功入库确认！', 'success');
+                closeModal('inboundConfirmModal');
+                loadPendingInbound(1);
+            } catch (error) {
+                showToast(`入库失败: ${error.message}`, 'error');
+            }
+        });
+
+        // --- Return Item ---
+        function openReturnItemModal(itemId) {
+            document.getElementById('returnItemId').value = itemId;
+            document.getElementById('returnItemQty').value = '';
+            document.getElementById('returnItemReason').value = '';
+            openModal('returnItemModal');
+        }
+
+        document.getElementById('returnItemForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const itemId = document.getElementById('returnItemId').value;
+            const reason = document.getElementById('returnItemReason').value.trim();
+            const qty = parseInt(document.getElementById('returnItemQty').value);
+
+            if (!reason) {
+                showToast('请务必输入退货原因', 'warning');
+                return;
+            }
+            if (!qty || qty < 1) {
+                showToast('请输入有效的退货数量', 'warning');
+                return;
+            }
+
+            const confirmed = await confirmDialog('确认要退回此批物料吗？点击确认后，此单不再出现在待入库列表中，直至供应商重新发货。');
+            if (!confirmed) return;
+
+            try {
+                await api.post(`/warehouse/return/${itemId}`, {
+                    return_reason: reason,
+                    return_qty: qty
+                });
+
+                showToast('已向供应商下达退单', 'success');
+                closeModal('returnItemModal');
+                loadPendingInbound(1);
+            } catch (error) {
+                showToast(`退货失败: ${error.message}`, 'error');
+            }
+        });
+
+        async function searchMaterialForOutbound(query) {
+            const resultsDiv = document.getElementById('outboundMaterialResults');
+
+            if (query.length < 1) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            try {
+                const results = await api.get(`/materials/search?q=${encodeURIComponent(query)}`);
+
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = '<div style="padding: var(--spacing-md); color: var(--text-muted);">无匹配结果</div>';
+                } else {
+                    resultsDiv.innerHTML = results.map(m => `
+                        <div style="padding: var(--spacing-md); cursor: pointer; border-bottom: 1px solid var(--border-color);" 
+                             onclick="selectOutboundMaterial(${m.id}, '${m.sap_code} - ${m.name_cn}', '${m.image || ''}', '${m.drawing_pdf || ''}')"
+                             onmouseover="this.style.background='rgba(14, 165, 233, 0.1)'" 
+                             onmouseout="this.style.background=''">
+                            <strong>${m.sap_code}</strong> - ${m.name_cn}
+                        </div>
+                    `).join('');
+                }
+                resultsDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        let currentOutboundStock = null;
+
+        async function selectOutboundMaterial(id, name, imageStr, pdfStr) {
+            document.getElementById('outboundMaterialId').value = id;
+            document.getElementById('outboundMaterialSearch').value = name;
+            document.getElementById('outboundMaterialResults').style.display = 'none';
+
+            // Set Thumbnail Area
+            const thumbArea = document.getElementById('outboundMaterialThumbArea');
+            const thumbImgBox = document.getElementById('outboundMaterialImages');
+            thumbImgBox.innerHTML = '';
+
+            let hasThumb = false;
+
+            if (imageStr && imageStr.trim() !== '' && imageStr !== 'null') {
+                thumbImgBox.innerHTML += `<img src="${imageStr}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border-color);" onclick="openLightbox('${imageStr}', 'image')" title="点击查看大图">`;
+                hasThumb = true;
+            }
+            if (pdfStr && pdfStr.trim() !== '' && pdfStr !== 'null') {
+                thumbImgBox.innerHTML += `<div style="width: 80px; height: 80px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border-color); color: var(--color-danger);" onclick="openLightbox('${pdfStr}', 'pdf')" title="点击查看PDF图纸"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`;
+                hasThumb = true;
+            }
+
+            if (hasThumb) {
+                thumbArea.style.display = 'flex';
+            } else {
+                thumbArea.style.display = 'flex';
+                thumbImgBox.innerHTML = '<span style="color:var(--text-muted); font-size:0.875rem;">暂无图片/图纸</span>';
+            }
+
+            // Load stock info
+            try {
+                const stock = await api.get(`/warehouse/stock/${id}`);
+                currentOutboundStock = stock;
+                document.getElementById('outboundActualQty').textContent = stock.actual_qty;
+                document.getElementById('outboundSapQty').textContent = stock.sap_qty;
+                document.getElementById('outboundUnrecSapQty').textContent = stock.unrecorded_sap_qty;
+                document.getElementById('outboundUnrecWithQty').textContent = stock.unrecorded_withdrawn_qty;
+                document.getElementById('outboundStockInfo').style.display = 'block';
+            } catch (error) {
+                currentOutboundStock = null;
+                document.getElementById('outboundStockInfo').style.display = 'none';
+            }
+        }
+
+        async function submitOutbound() {
+            const materialId = document.getElementById('outboundMaterialId').value;
+            const qty = parseInt(document.getElementById('outboundQty').value);
+            const date = document.getElementById('outboundDate').value;
+            const person = document.getElementById('outboundPerson').value;
+            const status = document.getElementById('outboundSapStatus').value;
+            let receiptEl = document.getElementById('outboundReceipt');
+            const receipt = receiptEl ? receiptEl.value : '否';
+            const notes = document.getElementById('outboundNotes').value;
+
+            if (!materialId || !qty || !date || !person) {
+                showToast('请填写所有必填项', 'warning');
+                return;
+            }
+
+            try {
+                await api.post('/warehouse/outbound', {
+                    material_id: parseInt(materialId),
+                    quantity: qty,
+                    outbound_date: new Date(date).toISOString(),
+                    withdraw_person: person,
+                    sap_status: status,
+                    has_receipt: receipt,
+                    notes: notes
+                });
+
+                showToast('出库成功', 'success');
+
+                // Reset form
+                document.getElementById('outboundMaterialId').value = '';
+                document.getElementById('outboundMaterialSearch').value = '';
+                document.getElementById('outboundQty').value = '';
+                document.getElementById('outboundPerson').value = '';
+                if (receiptEl) receiptEl.value = '否';
+                document.getElementById('outboundNotes').value = '';
+                document.getElementById('outboundStockInfo').style.display = 'none';
+                currentOutboundStock = null;
+
+            } catch (error) {
+                showToast('出库失败: ' + error.message, 'error');
+            }
+        }
+
+        // Outbound Tab switching
+        function switchOutboundTab(tabId) {
+            document.querySelectorAll('#outboundSection .tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab_outbound_${tabId}`).classList.add('active');
+
+            if (tabId === 'form') {
+                document.getElementById('outboundFormView').style.display = 'block';
+                document.getElementById('outboundHistoryView').style.display = 'none';
+            } else {
+                document.getElementById('outboundFormView').style.display = 'none';
+                document.getElementById('outboundHistoryView').style.display = 'block';
+                loadOutboundHistory();
+            }
+        }
+
+        // Outbound History State
+        let currentOutboundHistoryPage = 1;
+        const outboundHistoryLimit = 20;
+        let outboundHistorySearchTimer = null;
+
+        function debouncedSearchOutboundHistory() {
+            clearTimeout(outboundHistorySearchTimer);
+            outboundHistorySearchTimer = setTimeout(() => {
+                currentOutboundHistoryPage = 1;
+                loadOutboundHistory();
+            }, 500);
+        }
+
+        async function loadOutboundHistory(page = 1) {
+            currentOutboundHistoryPage = page;
+            const search = document.getElementById('historyOutboundSearch').value;
+            const skip = (page - 1) * outboundHistoryLimit;
+
+            try {
+                const data = await api.get(`/warehouse/outbound-history?skip=${skip}&limit=${outboundHistoryLimit}&search=${encodeURIComponent(search)}`);
+                renderOutboundHistory(data.items, data.total);
+            } catch (error) {
+                document.getElementById('outboundHistoryBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--color-danger)">加载失败: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderOutboundHistory(items, total) {
+            const tbody = document.getElementById('outboundHistoryBody');
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">无记录</td></tr>';
+                document.getElementById('outboundHistoryPagination').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${new Date(item.outbound_date).toLocaleString()}</td>
+                    <td>
+                        <div style="display: flex; gap: var(--spacing-xs);">
+                            ${item.material.image ? `<img src="${item.material.image}" style="width:32px;height:32px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;" onclick="openLightbox('${item.material.image}', 'image')" title="查看图片">` : ''}
+                            ${item.material.drawing_pdf ? `<div style="width:32px;height:32px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;color:var(--color-danger);border:1px solid var(--border-color);" onclick="openLightbox('${item.material.drawing_pdf}', 'pdf')" title="查看图纸"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="font-medium">${item.material.sap_code}</div>
+                        <div class="text-xs text-muted">${item.material.name_cn}</div>
+                    </td>
+                    <td style="color:var(--color-danger);font-weight:600;">-${item.quantity}</td>
+                    <td>${item.withdraw_person || '-'}</td>
+                    <td><span class="badge ${item.sap_status === '已录入' ? 'badge-success' : 'badge-warning'}">${item.sap_status}</span></td>
+                    <td>${item.has_receipt === '是' ? '<span style="color:var(--color-success);">是</span>' : '<span style="color:var(--color-danger);">否</span>'}</td>
+                    <td>${item.notes || '-'}</td>
+                    <td>
+                        <button class="btn btn-icon" onclick="deleteOutboundRecord(${item.id})" title="删除出库记录" style="color:var(--color-danger)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Setup pagination
+            const totalPages = Math.ceil(total / outboundHistoryLimit);
+            renderPagination(total, currentOutboundHistoryPage, outboundHistoryLimit, document.getElementById('outboundHistoryPagination'), 'loadOutboundHistory');
+        }
+
+        async function deleteOutboundRecord(id) {
+            if (!confirm('确定要删除此出库记录吗？\\n删除后，对应的库存数量将被回滚。此操作不可逆！')) return;
+            try {
+                await api.delete('/warehouse/outbound/' + id);
+                showToast('已删除出库记录并回滚库存', 'success');
+                loadOutboundHistory(currentOutboundHistoryPage);
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // Hide dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-dropdown')) {
+                document.getElementById('outboundMaterialResults').style.display = 'none';
+            }
+        });
+
+        // Check URL params for action
+        const action = getQueryParam('action');
+        if (action === 'inbound') {
+            switchTab('inbound', document.querySelectorAll('.action-tab')[1]);
+        } else if (action === 'outbound') {
+            switchTab('outbound', document.querySelectorAll('.action-tab')[2]);
+        } else {
+            loadStock();
+        }
+
+        // --- Lightbox Functions ---
+        let currentZoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        function openLightbox(src, type) {
+            const content = document.getElementById('lightboxContent');
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+
+            if (type === 'image') {
+                content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <img src="${src}" alt="预览图片" class="zoomable" id="lightboxImage" style="transform: translate(0px, 0px) scale(1); cursor: grab; will-change: transform;">
+                    <div class="lightbox-controls">
+                        <button onclick="zoomOut()" title="缩小">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button onclick="zoomIn()" title="放大">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <button onclick="resetZoom()" title="重置">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    const img = document.getElementById('lightboxImage');
+                    if (img) {
+                        img.addEventListener('wheel', handleWheelZoom, { passive: false });
+                        img.addEventListener('mousedown', startDrag);
+                        img.addEventListener('mousemove', doDrag);
+                        img.addEventListener('mouseup', endDrag);
+                        img.addEventListener('mouseleave', endDrag);
+                    }
+                }, 100);
+
+            } else if (type === 'pdf') {
+                content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <iframe src="${src}" style="width:80vw;height:85vh;border:none;background:white;border-radius:var(--radius-md);"></iframe>
+                `;
+            }
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function handleWheelZoom(e) {
+            e.preventDefault();
+            const oldZoom = currentZoom;
+            if (e.deltaY < 0) {
+                currentZoom = Math.min(currentZoom * 1.1, 5);
+            } else {
+                currentZoom = Math.max(currentZoom / 1.1, 0.25);
+            }
+            if (oldZoom !== currentZoom) {
+                const ratio = currentZoom / oldZoom;
+                panX *= ratio;
+                panY *= ratio;
+            }
+            updateZoom();
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.cursor = 'grabbing';
+                img.style.transition = 'none';
+            }
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+            }
+        }
+
+        function endDrag(e) {
+            isDragging = false;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+                img.style.transition = 'transform 0.1s ease-out';
+            }
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.25, 5);
+            updateZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.25, 0.25);
+            updateZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+            updateZoom();
+        }
+
+        function updateZoom() {
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+                document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+            }
+        }
+
+        function closeLightbox(event) {
+            if (event.target.id === 'lightbox' || event.target.classList.contains('lightbox-close')) {
+                document.getElementById('lightbox').classList.remove('active');
+                document.body.style.overflow = '';
+                currentZoom = 1;
+            }
+        }
+
+        // === Location Configuration Management ===
+        async function loadLocationOptions() {
+            try {
+                const results = await api.get('/config/location');
+                window.locationOptions = results.map(r => r.value).sort();
+            } catch (e) {
+                console.warn('Load locations error:', e);
+            }
+        }
+
+        async function openLocationConfig() {
+            openModal('locationConfigModal');
+            renderLocationConfigList();
+        }
+
+        async function renderLocationConfigList() {
+            const tbody = document.getElementById('locationConfigList');
+            try {
+                const results = await api.get('/config/location');
+                if (results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">暂无配置的库位</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = results.map(loc => `
+                    <tr>
+                        <td>${loc.value}</td>
+                        <td>
+                            <button class="btn btn-icon" onclick="deleteLocationConfig(${loc.id})" title="删除" style="color:var(--color-danger);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="2" style="color:red;text-align:center;">错误: ${e.message}</td></tr>`;
+            }
+        }
+
+        function formatErr(e) {
+            if (!e) return '未知错误';
+            if (typeof e.message === 'string') return e.message;
+            if (typeof e.message === 'object') return JSON.stringify(e.message);
+            return String(e);
+        }
+
+        async function addLocationConfig() {
+            const input = document.getElementById('newLocationName');
+            const val = input.value.trim();
+            if (!val) return;
+
+            try {
+                await api.post('/config/location', { option_value: val });
+                input.value = '';
+                showToast('库位添加成功');
+                await loadLocationOptions();
+                renderLocationConfigList();
+
+                // Get current active page or default to 1
+                const activePageBtn = document.querySelector('#stockPagination .btn-primary');
+                const page = activePageBtn ? parseInt(activePageBtn.textContent) : 1;
+                loadStock(page); // refresh warehouse table to show new option
+            } catch (e) {
+                showToast('添加失败: ' + formatErr(e), 'error');
+            }
+        }
+
+        async function deleteLocationConfig(id) {
+            if (!confirm('确定要删除此库位配置吗？删除后正在使用此库位的物料不受影响。')) return;
+            try {
+                await api.delete(`/config/${id}`);
+                showToast('已删除');
+                await loadLocationOptions();
+                renderLocationConfigList();
+
+                const activePageBtn = document.querySelector('#stockPagination .btn-primary');
+                const page = activePageBtn ? parseInt(activePageBtn.textContent) : 1;
+                loadStock(page);
+            } catch (e) {
+                showToast('删除失败: ' + formatErr(e), 'error');
+            }
+        }
+
+        async function updateLocationInline(materialId, newLocationText) {
+            try {
+                await api.put(`/materials/${materialId}/location`, { location: newLocationText || null });
+                showToast('库位更新成功');
+            } catch (e) {
+                showToast('库位更新失败: ' + formatErr(e), 'error');
+                const activePageBtn = document.querySelector('#stockPagination .btn-primary');
+                const page = activePageBtn ? parseInt(activePageBtn.textContent) : 1;
+                loadStock(page); // revert state
+            }
+        }
+
+        // Execute bootstrap
+        initWarehouse();
+    </script>
+</body>
+
+</html>

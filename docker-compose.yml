@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  voniko-factory:
+    build: .
+    container_name: voniko-factory
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./voniko.db:/app/voniko.db
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Cloudflare Tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: voniko-tunnel
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - voniko-factory
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  db_data:

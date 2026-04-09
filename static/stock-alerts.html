@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存预警 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <style>
+        .alert-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--color-danger);
+        }
+
+        .alert-card.warning::before {
+            background: var(--color-warning);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .alert-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        .alert-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+        }
+
+        .alert-stat {
+            text-align: center;
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+        }
+
+        .alert-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .alert-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .trend-chart {
+            height: 100px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: flex-end;
+            padding: var(--spacing-sm);
+            gap: 2px;
+            margin-top: var(--spacing-md);
+        }
+
+        .trend-bar {
+            flex: 1;
+            background: var(--accent-gradient);
+            border-radius: 2px 2px 0 0;
+            min-height: 5px;
+            transition: height var(--transition-normal);
+        }
+
+        .summary-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .summary-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>库存预警</h1>
+                    <span class="badge badge-danger pulse" id="alertCount">0 个预警</span>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" onclick="refreshAlerts()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        刷新
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Section -->
+            <div class="summary-section">
+                <div class="summary-box">
+                    <div class="summary-value" style="color: var(--color-danger);" id="criticalCount">0</div>
+                    <div class="summary-label">严重缺货</div>
+                    <div style="font-size: 0.875rem; color: var(--text-muted);">实际数量 = 0</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-value" style="color: var(--color-warning);" id="lowCount">0</div>
+                    <div class="summary-label">低库存</div>
+                    <div style="font-size: 0.875rem; color: var(--text-muted);">低于安全库存</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-value" style="color: var(--accent-primary);" id="normalCount">0</div>
+                    <div class="summary-label">正常库存</div>
+                    <div style="font-size: 0.875rem; color: var(--text-muted);">高于安全库存</div>
+                </div>
+            </div>
+
+            <!-- Alerts List -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">预警物料列表</h3>
+                    <a href="/static/orders.html?action=new" class="btn btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                        创建采购订单
+                    </a>
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>SAP号</th>
+                                <th>物料名称</th>
+                                <th>库位</th>
+                                <th>当前数量</th>
+                                <th>安全库存</th>
+                                <th>差额</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertsBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                    加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        async function loadAlerts() {
+            const tbody = document.getElementById('alertsBody');
+
+            try {
+                // Get low stock items
+                const data = await api.get('/warehouse/stock?low_stock=true&limit=100');
+
+                let critical = 0;
+                let low = 0;
+                let normal = 0;
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--color-success); padding: 3rem;">✓ 所有物料库存正常，无预警</td></tr>';
+                    document.getElementById('alertCount').textContent = '0 个预警';
+                } else {
+                    const rows = data.items.map(stock => {
+                        const diff = stock.actual_qty - (stock.material.min_stock || 0);
+                        let status = 'warning';
+                        let statusText = '低库存';
+
+                        if (stock.actual_qty === 0) {
+                            status = 'danger';
+                            statusText = '严重缺货';
+                            critical++;
+                        } else {
+                            low++;
+                        }
+
+                        return `
+                            <tr>
+                                <td><strong>${stock.material.sap_code}</strong></td>
+                                <td>${stock.material.name_cn}</td>
+                                <td>${stock.location || '-'}</td>
+                                <td style="font-weight: 700; color: ${status === 'danger' ? 'var(--color-danger)' : 'var(--color-warning)'};">
+                                    ${stock.actual_qty}
+                                </td>
+                                <td>${stock.material.min_stock || 0}</td>
+                                <td style="color: var(--color-danger);">${diff}</td>
+                                <td><span class="badge badge-${status} ${status === 'danger' ? 'pulse' : ''}">${statusText}</span></td>
+                                <td>
+                                    <button class="btn btn-secondary" onclick="createOrder(${stock.material.id}, '${stock.material.sap_code}', '${stock.material.name_cn}')">
+                                        采购
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    tbody.innerHTML = rows.join('');
+                    document.getElementById('alertCount').textContent = `${data.items.length} 个预警`;
+                }
+
+                document.getElementById('criticalCount').textContent = critical;
+                document.getElementById('lowCount').textContent = low;
+
+                // Get normal stock count
+                const allStock = await api.get('/warehouse/stock?limit=1');
+                document.getElementById('normalCount').textContent = Math.max(0, (allStock.total || 0) - critical - low);
+
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        function createOrder(materialId, sapCode, name) {
+            // Store material info and redirect to orders
+            sessionStorage.setItem('preselectedMaterial', JSON.stringify({
+                id: materialId,
+                sap_code: sapCode,
+                name: name
+            }));
+            window.location.href = '/static/orders.html?action=new';
+        }
+
+        function refreshAlerts() {
+            loadAlerts();
+            showToast('已刷新预警数据', 'success');
+        }
+
+        loadAlerts();
+
+        // Auto refresh every minute
+        setInterval(loadAlerts, 60000);
+    </script>
+</body>
+
+</html>

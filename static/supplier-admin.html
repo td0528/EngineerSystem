@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商单据管理 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .portal-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .portal-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .portal-logo h1 {
+            font-size: 1.5rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .supplier-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .supplier-avatar {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .portal-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .portal-stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+
+        .portal-stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+            color: var(--accent-primary);
+        }
+
+        .portal-stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .batch-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            align-items: center;
+        }
+
+        .batch-actions .selected-count {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .material-thumb {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .material-thumb .thumb-item {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            object-fit: cover;
+        }
+
+        .material-thumb .pdf-mini {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--color-danger);
+        }
+
+        /* Lightbox styles */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: var(--radius-md);
+        }
+
+        .lightbox-content iframe {
+            width: 80vw;
+            height: 85vh;
+            border: none;
+            border-radius: var(--radius-md);
+            background: white;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        /* Document cell styles */
+        .doc-cell {
+            text-align: center;
+        }
+
+        .doc-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .doc-link {
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .doc-delete {
+            cursor: pointer;
+            color: var(--color-danger);
+            font-weight: bold;
+            font-size: 1rem;
+            opacity: 0.6;
+        }
+
+        .doc-delete:hover {
+            opacity: 1;
+        }
+
+        .btn-upload {
+            width: 28px;
+            height: 28px;
+            border: 1px dashed var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-upload:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .doc-date {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
+        /* Sortable Header Styles */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        th.sortable:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        .sort-icon {
+            font-size: 0.8em;
+            opacity: 0.3;
+            margin-left: 4px;
+        }
+
+        th.sortable.asc .sort-icon {
+            opacity: 1;
+            content: "↑";
+        }
+
+        th.sortable.desc .sort-icon {
+            opacity: 1;
+            content: "↓";
+        }
+
+        /* Filter Row Input Styles */
+        .filter-row th {
+            padding: 0.2rem 0.4rem;
+            background: var(--bg-secondary);
+        }
+
+        .filter-row input {
+            width: 100%;
+            padding: 0.3rem 0.5rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .filter-row input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .filter-row input::placeholder {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+    </style>
+    <script src="/static/js/i18n.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="portal-header">
+                <div class="portal-logo">
+                    <h1>📦 供应商管理</h1>
+                    <button class="btn btn-secondary js-lang-toggle" onclick="toggleLanguage()"
+                        style="height: 32px; padding: 0 0.8rem; font-size: 0.85rem; margin-left: var(--spacing-md);">
+                        VN
+                    </button>
+                </div>
+                <div class="supplier-info" style="display: flex; align-items: center; gap: var(--spacing-md);">
+                    <label style="font-weight: 600; white-space: nowrap;">选择供应商:</label>
+                    <select id="supplierSelector" class="form-select" style="min-width: 220px; font-size: 0.9rem;"
+                        onchange="onSupplierChange()">
+                        <option value="">—— 请选择供应商 ——</option>
+                    </select>
+                    <div class="supplier-avatar" id="supplierAvatar" style="margin-left: var(--spacing-sm);">A</div>
+                    <div>
+                        <div style="font-weight: 600;" id="supplierName">管理员</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">Admin View</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 0 var(--spacing-xl) var(--spacing-xl);">
+                <!-- Stats -->
+                <div class="portal-stats">
+                    <div class="portal-stat">
+                        <div class="portal-stat-value" id="totalItems">0</div>
+                        <div class="portal-stat-label">总物料数</div>
+                    </div>
+                    <div class="portal-stat">
+                        <div class="portal-stat-value" id="pendingItems">0</div>
+                        <div class="portal-stat-label">待报价</div>
+                    </div>
+                    <div class="portal-stat">
+                        <div class="portal-stat-value" id="deliveringItems">0</div>
+                        <div class="portal-stat-label">送货中</div>
+                    </div>
+                    <div class="portal-stat">
+                        <div class="portal-stat-value" id="completedItems">0</div>
+                        <div class="portal-stat-label">已完成</div>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="filter-bar" style="margin-bottom: var(--spacing-lg);">
+                    <div class="search-box" style="flex: 1; max-width: 300px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input type="text" class="form-input" id="searchInput" placeholder="搜索PO号/SAP码/物料名称/日期..."
+                            oninput="debouncedSearch()">
+                    </div>
+                    <!-- Status dropdown removed in favor of Tab navigation -->
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs"
+                style="display: flex; gap: var(--spacing-md); border-bottom: 2px solid var(--border-color); margin-bottom: var(--spacing-lg); padding: 0 var(--spacing-xl);">
+                <button class="tab-btn active" id="tab_pending" onclick="switchTab('pending')"
+                    style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 600; color: var(--accent-primary); border-bottom: 3px solid var(--accent-primary); margin-bottom: -2px;">📝
+                    已下单 / 待发货</button>
+                <button class="tab-btn" id="tab_delivered" onclick="switchTab('delivered')"
+                    style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 500; color: var(--text-secondary);">🚚
+                    已送货 / 待开票</button>
+                <button class="tab-btn" id="tab_invoiced" onclick="switchTab('invoiced')"
+                    style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 500; color: var(--text-secondary);">🧾
+                    已开发票</button>
+                <button class="tab-btn" id="tab_returned" onclick="switchTab('returned')"
+                    style="background: none; border: none; padding: var(--spacing-md) var(--spacing-lg); cursor: pointer; font-size: 1.1rem; font-weight: 500; color: var(--color-danger);">🔙
+                    退货处理</button>
+            </div>
+
+            <!-- Batch Actions -->
+            <div class="batch-actions" style="padding: 0 var(--spacing-xl);">
+                <span class="selected-count" id="selectedCount">已选择 0 项</span>
+                <button class="btn btn-secondary" onclick="openQuotationModal()" id="btnQuotation" disabled>
+                    📋 上传报价单
+                </button>
+                <button class="btn btn-info" onclick="batchConfirmOrders()" id="btnConfirm" disabled
+                    style="background: var(--accent-primary); color: white;">
+                    ✔️ 批量确认订单
+                </button>
+                <button class="btn btn-primary" onclick="openDeliveryModal()" id="btnDelivering" disabled>
+                    📦 选中上传并进入送货流程
+                </button>
+                <button class="btn btn-success" onclick="openInvoiceModal()" id="btnInvoice" disabled
+                    style="display:none;">
+                    🧾 选中项上传发票
+                </button>
+                <button class="btn btn-primary" onclick="openRedeliveryModal()" id="btnRedelivery" disabled
+                    style="display:none; background: var(--color-danger);">
+                    🔙 选中的不良品重新送货
+                </button>
+            </div>
+
+            <!-- Dynamic Container based on Tab -->
+            <div style="padding: 0 var(--spacing-xl) var(--spacing-xl);">
+                <div id="dynamicTableContainer">
+                    <!-- Rendered by JS -->
+                </div>
+                <div id="pagination" style="margin-top: var(--spacing-lg);"></div>
+            </div>
+
+            <!-- Lightbox -->
+            <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+                <div class="lightbox-content" id="lightboxContent"></div>
+            </div>
+
+
+            <!-- Redelivery Modal -->
+            <div class="modal-overlay" id="redeliveryModal">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2>🔙 确认重新送货</h2>
+                        <button class="modal-close" onclick="closeModal('redeliveryModal')">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="redeliveryForm" onsubmit="submitRedelivery(event)">
+                            <div class="form-group">
+                                <label>预计重新送货日期 <span style="color:red">*</span></label>
+                                <input type="date" id="redeliveryDateInput" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>重发说明 (必填) <span style="color:red">*</span></label>
+                                <textarea id="redeliveryExplanationInput" class="form-input" required rows="3"
+                                    placeholder="请回复仓库的退货说明，并简述重送计划..."></textarea>
+                            </div>
+
+                            <div class="form-actions"
+                                style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                <button type="button" class="btn btn-secondary"
+                                    onclick="closeModal('redeliveryModal')">取消</button>
+                                <button type="submit" class="btn btn-primary"
+                                    style="background: var(--color-danger); border-color: var(--color-danger);">确认重新送货</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toast-container" id="toastContainer"></div>
+
+            <script src="/static/js/sidebar.js"></script>
+            <script src="/static/js/app.js"></script>
+            <script>
+                // Admin auth check
+                checkAuth();
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                document.getElementById('supplierName').textContent = user.name || user.username || '管理员';
+                document.getElementById('supplierAvatar').textContent = (user.name || 'A')[0].toUpperCase();
+
+                let currentSupplierId = null;
+
+                // Load supplier list for selector
+                async function loadSupplierList() {
+                    try {
+                        const suppliers = await api.get('/orders/suppliers/search?q=');
+                        const select = document.getElementById('supplierSelector');
+                        select.innerHTML = '<option value="">—— 请选择供应商 ——</option>';
+                        suppliers.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s.id;
+                            opt.textContent = `${s.code} - ${s.name}`;
+                            select.appendChild(opt);
+                        });
+                        
+                        // Restore saved supplier selection
+                        const savedSupplier = localStorage.getItem('supplierAdminSupplierId');
+                        if (savedSupplier && select.querySelector(`option[value="${savedSupplier}"]`)) {
+                            select.value = savedSupplier;
+                            currentSupplierId = parseInt(savedSupplier);
+                            // Restore saved tab then load
+                            const savedTab = localStorage.getItem('supplierAdminTab');
+                            if (savedTab) switchTab(savedTab);
+                            else loadItems(1);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to load suppliers:', e);
+                    }
+                }
+
+                function onSupplierChange() {
+                    const val = document.getElementById('supplierSelector').value;
+                    currentSupplierId = val ? parseInt(val) : null;
+                    localStorage.setItem('supplierAdminSupplierId', val || '');
+                    if (currentSupplierId) {
+                        loadItems(1);
+                    }
+                }
+
+                // Init
+                loadSupplierList();
+
+                let allItems = [];
+                let selectedIds = new Set();
+                let currentPage = 1;
+                const pageSize = 50;
+
+                // Language Toggle
+                let currentLang = localStorage.getItem('lang') || 'cn';
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.querySelectorAll('.js-lang-toggle').forEach(btn => {
+                        btn.textContent = currentLang === 'cn' ? 'VN' : 'CN';
+                    });
+                });
+
+                function toggleLanguage() {
+                    currentLang = currentLang === 'cn' ? 'vn' : 'cn';
+                    localStorage.setItem('lang', currentLang);
+                    document.querySelectorAll('.js-lang-toggle').forEach(btn => {
+                        btn.textContent = currentLang === 'cn' ? 'VN' : 'CN';
+                    });
+                    if (allItems && allItems.length > 0) {
+                        renderItems(allItems);
+                    }
+                }
+
+                // Tab switching logic
+                let currentTab = 'pending';
+                function switchTab(tab) {
+                    currentTab = tab;
+                    document.querySelectorAll('.tab-btn').forEach(b => {
+                        b.style.color = 'var(--text-secondary)';
+                        b.style.fontWeight = '500';
+                        b.style.borderBottom = 'none';
+                    });
+                    const activeBtn = document.getElementById('tab_' + tab);
+                    activeBtn.style.color = 'var(--accent-primary)';
+                    activeBtn.style.fontWeight = '600';
+                    activeBtn.style.borderBottom = '3px solid var(--accent-primary)';
+
+                    selectedIds.clear();
+                    updateSelectionUI();
+
+                    // Adjust actions visibility based on tab
+                    const btnQuotation = document.getElementById('btnQuotation');
+                    if(btnQuotation) btnQuotation.style.display = (tab === 'pending') ? 'inline-block' : 'none';
+                    
+                    const btnConfirm = document.getElementById('btnConfirm');
+                    if(btnConfirm) btnConfirm.style.display = (tab === 'pending') ? 'inline-block' : 'none';
+                    
+                    document.getElementById('btnDelivering').style.display = (tab === 'pending') ? 'inline-block' : 'none';
+                    document.getElementById('btnInvoice').style.display = (tab === 'delivered') ? 'inline-block' : 'none';
+                    document.getElementById('btnRedelivery').style.display = (tab === 'returned') ? 'inline-block' : 'none';
+
+                    // Remember active tab across navigation
+                    localStorage.setItem('supplierAdminTab', tab);
+
+
+
+                    loadItems(1);
+                }
+
+                let currentSort = { field: 'order_date', order: 'desc' };
+
+                // Debounced search/filter
+                let searchTimeout;
+                function debouncedSearch() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => loadItems(1), 300);
+                }
+
+                function sortTable(field) {
+                    if (currentSort.field === field) {
+                        currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.field = field;
+                        currentSort.order = 'desc'; // Date defaults to desc usually
+                    }
+                    loadItems(1);
+                }
+
+                async function loadItems(page = 1) {
+                    currentPage = page;
+                    const container = document.getElementById('dynamicTableContainer');
+
+                    if (!currentSupplierId) {
+                        container.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-muted);">👆 请先在顶部选择一个供应商</div>';
+                        return;
+                    }
+
+                    container.innerHTML = '<div style="text-align: center; padding: 3rem;"><div class="spinner" style="margin: 0 auto 1rem;"></div>加载中...</div>';
+
+                    try {
+                        let url = `/supplier/items?supplier_id=${currentSupplierId}&skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+                        const search = document.getElementById('searchInput').value;
+
+                        // Set status param based on current tab
+                        let statusQuery = '';
+                        if (currentTab === 'pending') statusQuery = '已下单,已确认';
+                        if (currentTab === 'delivered') statusQuery = '已送货,已收货';
+                        if (currentTab === 'invoiced') statusQuery = '已开发票';
+
+                        if (currentTab === 'returned') {
+                            // Fetch from the new returns endpoint
+                            let retUrl = `/supplier/returns?supplier_id=${currentSupplierId}&skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+                            const retData = await api.get(retUrl);
+                            allItems = retData.items;
+
+                            if (retData.items.length === 0) {
+                                container.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-muted);">暂无退单数据</div>';
+                            } else {
+                                renderItems(retData.items);
+                            }
+                            renderPagination(retData.total, currentPage, pageSize, document.getElementById('pagination'), 'loadItems');
+                            return; // Skip the rest of the standard logic
+                        }
+
+
+                        if (statusQuery) url += `&status=${encodeURIComponent(statusQuery)}`;
+
+                        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                        // Sorting
+                        if (currentSort.field) {
+                            url += `&sort_by=${currentSort.field}_${currentSort.order}`;
+                        }
+
+                        // Keep selected items visible even if filtered
+                        if (selectedIds.size > 0) {
+                            url += `&locked_ids=${encodeURIComponent(Array.from(selectedIds).join(','))}`;
+                        }
+
+                        const data = await api.get(url);
+                        allItems = data.items;
+
+                        // Update stats
+                        updateStats(data.items);
+
+                        if (data.items.length === 0) {
+                            container.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-muted);">暂无对应数据</div>';
+                        } else {
+                            renderItems(data.items);
+                        }
+
+                        renderPagination(data.total, currentPage, pageSize, document.getElementById('pagination'), 'loadItems');
+
+                    } catch (error) {
+                        showToast('加载失败: ' + error.message, 'error');
+                    }
+                }
+
+                function updateStats(items) {
+                    document.getElementById('totalItems').textContent = items.length;
+                    document.getElementById('pendingItems').textContent = items.filter(i => i.item_status === '已下单' || !i.unit_price).length;
+                    document.getElementById('deliveringItems').textContent = items.filter(i => i.item_status === '已送货').length;
+                    document.getElementById('completedItems').textContent = items.filter(i => i.item_status === '已收货' || i.item_status === '已开发票').length;
+                }
+
+
+                function renderItems(items) {
+                    const container = document.getElementById('dynamicTableContainer');
+                    if (currentTab === 'pending') {
+                        container.innerHTML = generatePendingTable(items);
+                    } else if (currentTab === 'delivered') {
+                        container.innerHTML = generateDeliveredTable(items);
+                    } else if (currentTab === 'invoiced') {
+                        container.innerHTML = generateInvoicedTable(items);
+                    } else if (currentTab === 'returned') {
+                        container.innerHTML = generateReturnedTable(items);
+                    }
+                }
+
+                function generatePendingTable(items) {
+                    const unconfirmedItems = items.filter(i => i.item_status === '已下单');
+                    const confirmedItems = items.filter(i => i.item_status === '已确认');
+                    
+                    let html = '';
+                    
+                    // Unconfirmed Section
+                    if (unconfirmedItems.length > 0) {
+                        html += `<div style="margin-bottom: var(--spacing-xl);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: var(--spacing-md);">
+                               <h3 style="color:var(--text-primary); margin:0;">⏳ 未确认订单 (等待确认)</h3>
+                               <span class="badge badge-warning">${unconfirmedItems.length} 项</span>
+                            </div>
+                            <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow-x: auto; background: var(--bg-card);">
+                                <table class="table" style="margin: 0; border: none;">
+                                    <thead><tr>
+                                        <th style="width: 40px;"><input type="checkbox" onchange="toggleGroupSelection(this, 'unconfirmed')"></th>
+                                        <th>状态</th><th>图片/文档</th><th>PO号</th><th>SAP号</th><th>物料名称</th><th>要求到货</th><th>数量</th><th>购买链接</th>
+                                    </tr></thead><tbody>`;
+                                    
+                        unconfirmedItems.forEach(item => {
+                            const isChecked = selectedIds.has(item.id) ? 'checked' : '';
+                            html += `<tr>
+                                <td><input type="checkbox" class="item-checkbox doc-group-unconfirmed" data-id="${item.id}" ${isChecked} onchange="toggleItemSelection(${item.id})"></td>
+                                <td><span class="badge badge-warning">未确认</span></td>
+                                <td>
+                                    <div class="material-thumb">
+                                        ${item.material_image ? `<img src="${item.material_image}" class="thumb-item" onclick="openLightbox('${item.material_image}', 'image')">` : ''}
+                                        ${item.material_pdf ? `<div class="pdf-mini" onclick="openLightbox('${item.material_pdf}', 'pdf')">📘</div>` : ''}
+                                    </div>
+                                </td>
+                                <td><strong>${item.po_number || '-'}</strong></td>
+                                <td>${item.sap_code || '-'}</td>
+                                <td>
+                                    <a href="javascript:void(0)" onclick="openPriceHistory(${item.material_id})" style="color: var(--accent-primary); text-decoration: underline; cursor: pointer;">
+                                        ${currentLang === 'cn' ? (item.material_name || '-') : (item.material_name_vn || item.material_name || '-')}
+                                    </a>
+                                </td>
+                                <td style="color: ${isOverdue(item.arrival_date) ? 'var(--color-danger)' : 'inherit'};">${formatDate(item.arrival_date) || '-'}</td>
+                                <td style="font-size:1.1rem; font-weight:600; color:var(--text-primary);">${item.ordered_qty || '-'}</td>
+                                <td>${item.purchase_link ? `<a href="${item.purchase_link.startsWith('http') ? item.purchase_link : 'https://' + item.purchase_link}" target="_blank" style="color: var(--accent-primary);">🔗 链接</a>` : '-'}</td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table></div></div>`;
+                    }
+                    
+                    // Confirmed Section
+                    if (confirmedItems.length > 0) {
+                        html += `<div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: var(--spacing-md);">
+                               <h3 style="color:var(--text-primary); margin:0;">✅ 已确认订单 (准备发货)</h3>
+                               <span class="badge badge-success">${confirmedItems.length} 项</span>
+                            </div>`;
+                            
+                        const grouped = {};
+                        confirmedItems.forEach(item => {
+                            const key = item.quotation_file || '无报价单';
+                            if (!grouped[key]) grouped[key] = [];
+                            grouped[key].push(item);
+                        });
+
+                        for (const [key, groupItems] of Object.entries(grouped)) {
+                            html += `<div style="background: var(--bg-tertiary); padding: var(--spacing-sm) var(--spacing-md); border-inline: 1px solid var(--border-color); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-md) var(--radius-md) 0 0; margin-top: var(--spacing-md);">
+                        <div style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" onchange="toggleGroupSelection(this, '${key}')">
+                            📋 聚合报价单: ${key === '无报价单' ? '未上传' : `<a href="javascript:void(0)" onclick="openLightbox('/${key}', 'pdf')" style="color:var(--accent-primary); text-decoration:underline;">查看文件</a>`}
+                            <span class="badge ${key === '无报价单' ? 'badge-neutral' : 'badge-info'}">${groupItems.length} 项</span>
+                        </div>
+                    </div>`;
+
+                            html += `<div style="border: 1px solid var(--border-color); border-radius: 0 0 var(--radius-md) var(--radius-md); margin-bottom: var(--spacing-lg); overflow-x: auto; background: var(--bg-card);">
+                        <table class="table" style="margin: 0; border: none;">
+                        <thead><tr>
+                            <th style="width: 40px;"></th>
+                            <th>状态</th>
+                            <th>图片/文档</th>
+                            <th>PO号</th>
+                            <th>SAP号</th>
+                            <th>物料名称</th>
+                            <th>要求到货</th>
+                            <th>剩余所需送货数</th>
+                            <th>本次发货数输入</th>
+                            <th>单价(VND)</th>
+                            <th>购买链接</th>
+                        </tr></thead><tbody>`;
+
+                            groupItems.forEach(item => {
+                                const isChecked = selectedIds.has(item.id) ? 'checked' : '';
+                                html += `<tr>
+                            <td><input type="checkbox" class="item-checkbox doc-group-${key.replace(/[^a-zA-Z0-9]/g, '')}" data-id="${item.id}" ${isChecked} onchange="toggleItemSelection(${item.id})"></td>
+                            <td><span class="badge badge-success">已确认</span></td>
+                            <td>
+                                <div class="material-thumb">
+                                    ${item.material_image ? `<img src="${item.material_image}" class="thumb-item" onclick="openLightbox('${item.material_image}', 'image')">` : ''}
+                                    ${item.material_pdf ? `<div class="pdf-mini" onclick="openLightbox('${item.material_pdf}', 'pdf')">📘</div>` : ''}
+                                </div>
+                            </td>
+                            <td><strong>${item.po_number}</strong></td>
+                            <td>${item.sap_code}</td>
+                            <td>
+                                <a href="javascript:void(0)" onclick="openPriceHistory(${item.material_id})" style="color: var(--accent-primary); text-decoration: underline; cursor: pointer;">
+                                    ${currentLang === 'cn' ? item.material_name : (item.material_name_vn || item.material_name)}
+                                </a>
+                            </td>
+                            <td style="color: ${isOverdue(item.arrival_date) ? 'var(--color-danger)' : 'inherit'};">${formatDate(item.arrival_date) || '-'}</td>
+                            <td style="font-size:1.1rem; font-weight:600; color:var(--text-primary);">${item.ordered_qty}</td>
+                            <td>
+                                <input type="number" id="deliveryQty_${item.id}" class="form-input" value="${item.ordered_qty}" max="${item.ordered_qty}" min="0" step="any" style="width: 80px; padding: 0.3rem;">
+                            </td>
+                            <td style="white-space:nowrap;"><input type="number" value="${item.unit_price || ''}" step="any" style="width:80px; padding:2px 4px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-primary); color:var(--text-primary); display:inline-block; vertical-align:middle;" placeholder="-" onchange="updateItemPrice(${item.id}, this.value, this.parentElement.querySelector('.cur-tog').textContent.trim())"><button class="cur-tog" onclick="toggleSupplierCurrency(${item.id}, this)" style="display:inline-block; vertical-align:middle; padding:2px 5px; font-size:0.7rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:2px;" title="切换货币">${item.currency || 'VND'}</button></td>
+                            <td>
+                                ${item.purchase_link ? `<a href="${item.purchase_link.startsWith('http') ? item.purchase_link : 'https://' + item.purchase_link}" target="_blank" style="color: var(--accent-primary);">🔗 链接</a>` : '-'}
+                            </td>
+                        </tr>`;
+                            });
+                            html += `</tbody></table></div>`;
+                        }
+                        html += `</div>`;
+                    }
+                    
+                    return html || '<div style="text-align: center; padding: 3rem; color: var(--text-muted);">暂无订单数据</div>';
+                }
+
+                function toggleGroupSelection(checkbox, groupId) {
+                    const safeGroupId = groupId.replace(/[^a-zA-Z0-9]/g, '');
+                    const itemCheckboxes = document.querySelectorAll('.doc-group-' + safeGroupId);
+                    itemCheckboxes.forEach(cb => {
+                        cb.checked = checkbox.checked;
+                        const id = parseInt(cb.getAttribute('data-id'));
+                        if (checkbox.checked) selectedIds.add(id);
+                        else selectedIds.delete(id);
+                    });
+                    updateSelectionUI();
+                }
+
+                function generateDeliveredTable(items) {
+                    const grouped = {};
+                    items.forEach(item => {
+                        const key = item.delivery_note || '无发货单';
+                        if (!grouped[key]) grouped[key] = [];
+                        grouped[key].push(item);
+                    });
+
+                    let html = '';
+                    for (const [key, groupItems] of Object.entries(grouped)) {
+                        html += `<div style="background: var(--bg-tertiary); padding: var(--spacing-sm) var(--spacing-md); border-inline: 1px solid var(--border-color); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-md) var(--radius-md) 0 0; margin-top: var(--spacing-md);">
+                    <div style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        📦 聚合送货批次: ${key === '无发货单' ? '未指定送货单' : `<a href="javascript:void(0)" onclick="openLightbox('/${key}', 'pdf')" style="color:var(--accent-primary); text-decoration:underline;">查看送货单据</a>`}
+                        <span class="badge badge-warning">${groupItems.length} 项</span>
+                    </div>
+                </div>`;
+
+                        html += `<div style="border: 1px solid var(--border-color); border-radius: 0 0 var(--radius-md) var(--radius-md); margin-bottom: var(--spacing-lg); overflow-x: auto; background: var(--bg-card);">
+                    <table class="table" style="margin: 0; border: none;">
+                    <thead><tr>
+                        <th style="width:40px;"></th>
+                        <th>PO号</th><th>SAP号</th><th>物料名称</th><th>已发货数量</th><th>单价(VND)</th><th>收货状态</th><th>报价单</th><th>报价日期</th><th>送货日期</th><th>购买链接</th>
+                    </tr></thead><tbody>`;
+
+                        groupItems.forEach(item => {
+                            const isChecked = selectedIds.has(item.id) ? 'checked' : '';
+                            const receiptBadge = item.item_status === '已收货'
+                                ? '<span class="badge badge-success">已收货 ✓</span>'
+                                : '<span class="badge badge-warning">未收货</span>';
+                            const canSelect = item.item_status === '已收货';
+                            html += `<tr${!canSelect ? ' style="opacity:0.7;"' : ''}>
+                        <td><input type="checkbox" class="item-checkbox doc-group-${key.replace(/[^a-zA-Z0-9]/g, '')}" data-id="${item.id}" ${isChecked} onchange="toggleItemSelection(${item.id})" ${!canSelect ? 'disabled title="仓库未确认收货，不可选择"' : ''}></td>
+                        <td>${item.po_number}</td>
+                        <td>${item.sap_code}</td>
+                        <td>${currentLang === 'cn' ? item.material_name : (item.material_name_vn || item.material_name)}</td>
+                        <td style="color:var(--accent-primary); font-weight:bold;">${item.ordered_qty}</td>
+                        <td>${item.unit_price || '-'}</td>
+                        <td>${receiptBadge}</td>
+                        <td>${item.quotation_file ? `<a href="javascript:void(0)" onclick="openLightbox('/${item.quotation_file}', 'pdf')" style="color:var(--accent-primary); text-decoration:underline;">📄 报价单</a>` : '-'}</td>
+                        <td>${formatDate(item.quotation_date) || '-'}</td>
+                        <td>${formatDate(item.actual_delivery_date) || '-'}</td>
+                        <td>${item.purchase_link ? `<a href="${item.purchase_link.startsWith('http') ? item.purchase_link : 'https://' + item.purchase_link}" target="_blank" style="color: var(--accent-primary);">🔗 链接</a>` : '-'}</td>
+                    </tr>`;
+                        });
+                        html += `</tbody></table></div>`;
+                    }
+                    return html || '<div style="text-align: center; padding: 3rem; color: var(--text-muted);">暂无送货数据</div>';
+                }
+
+                // Helper to get invoice date label
+                function getInvoiceLabel(invoiceFile, itemsList) {
+                    if(!invoiceFile || invoiceFile === '无发票') return '无发票';
+                    const groupItems = itemsList.filter(i => i.invoice_file === invoiceFile);
+                    if(groupItems.length === 0) return invoiceFile.split('/').pop().substring(0, 16) + '...';
+                    
+                    const dates = groupItems.map(i => i.invoice_date).filter(Boolean);
+                    const d = dates[0] ? formatDate(dates[0]) : '未知日期';
+                    const sameDate = itemsList.filter(it => it.invoice_file && it.invoice_file !== invoiceFile && it.invoice_date === dates[0]);
+                    let label = d;
+                    if (sameDate.length > 0) {
+                        const allKeys = [...new Set(itemsList.filter(it => it.invoice_date === dates[0] && it.invoice_file).map(it => it.invoice_file))];
+                        const idx = allKeys.indexOf(invoiceFile);
+                        if (idx > 0) label = d + '-' + idx;
+                    }
+                    return label;
+                }
+
+                function generateInvoicedTable(items) {
+                    const uniqueInvoices = [...new Set(items.map(i => i.invoice_file).filter(f => f))];
+                    const grouped = {};
+                    items.forEach(item => {
+                        const key = item.invoice_file || '无发票';
+                        if (!grouped[key]) grouped[key] = [];
+                        grouped[key].push(item);
+                    });
+
+                    let html = '';
+                    for (const [key, groupItems] of Object.entries(grouped)) {
+                        html += `<div style="background: var(--bg-tertiary); padding: var(--spacing-sm) var(--spacing-md); border-inline: 1px solid var(--border-color); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-md) var(--radius-md) 0 0; margin-top: var(--spacing-md);">
+                    <div style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" onchange="toggleGroupSelection(this, '${key}')">
+                        🧾 报销单据发票: ${key === '无发票' ? key : `<a href="javascript:void(0)" onclick="openLightbox('/${key}', 'pdf')" style="color:var(--accent-primary); text-decoration:underline;">查看发票 (${getInvoiceLabel(key, items)})</a>`}
+                        <span class="badge badge-success">${groupItems.length} 项</span>
+                    </div>
+                </div>`;
+
+                        html += `<div style="border: 1px solid var(--border-color); border-radius:  0 0 var(--radius-md) var(--radius-md); margin-bottom: var(--spacing-lg); overflow-x: auto; background: var(--bg-card);">
+                    <table class="table" style="margin: 0; border: none;">
+                    <thead><tr>
+                        <th style="width:40px;"></th>
+                        <th>PO号</th><th>SAP号</th><th>物料名称</th><th>数量</th><th>单价</th><th>报价单</th><th>报价日期</th><th>送货单</th><th>送货日期</th><th>发票日期</th><th>操作</th>
+                    </tr></thead><tbody>`;
+
+                        groupItems.forEach(item => {
+                            const isChecked = selectedIds.has(item.id) ? 'checked' : '';
+                            html += `<tr>
+                        <td><input type="checkbox" class="item-checkbox doc-group-${key.replace(/[^a-zA-Z0-9]/g, '')}" data-id="${item.id}" ${isChecked} onchange="toggleItemSelection(${item.id})"></td>
+                        <td>${item.po_number}</td>
+                        <td>${item.sap_code}</td>
+                        <td>${currentLang === 'cn' ? item.material_name : (item.material_name_vn || item.material_name)}</td>
+                        <td>${item.ordered_qty}</td>
+                        <td style="white-space:nowrap;"><input type="number" value="${item.unit_price || ''}" step="any" style="width:80px; padding:2px 4px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-primary); color:var(--text-primary); display:inline-block; vertical-align:middle;" onchange="updateItemPrice(${item.id}, this.value, this.parentElement.querySelector('.cur-tog').textContent.trim())"><button class="cur-tog" onclick="toggleSupplierCurrency(${item.id}, this)" style="display:inline-block; vertical-align:middle; padding:2px 5px; font-size:0.7rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:2px;" title="切换货币">${item.currency || 'VND'}</button></td>
+                        <td>${item.quotation_file ? `<a href="javascript:void(0)" onclick="openLightbox('/${item.quotation_file}', 'pdf')" style="color:var(--accent-primary); text-decoration:underline;">📄 报价单</a>` : '-'}</td>
+                        <td>${formatDate(item.quotation_date) || '-'}</td>
+                        <td>${item.delivery_note ? `<a href="javascript:void(0)" onclick="openLightbox('/${item.delivery_note}', 'pdf')" style="color:var(--accent-primary); text-decoration:underline;">📦 送货单</a>` : '-'}</td>
+                        <td>${formatDate(item.actual_delivery_date) || '-'}</td>
+                        <td>${formatDate(item.invoice_date) || '-'}</td>
+                        <td>
+                            <select class="form-select" style="width: 140px; padding: 2px; font-size: 0.8rem;" onchange="reassignInvoice(${item.id}, this.value)">
+                                <option value="">变更为关联发票...</option>
+                                ${uniqueInvoices.filter(inv => inv !== key).map(inv => `<option value="${inv}">变更为: 发票 ${getInvoiceLabel(inv, items)}</option>`).join('')}
+                            </select>
+                        </td>
+                    </tr>`;
+                        });
+                        html += `</tbody></table></div>`;
+                    }
+                    return html || '<div style="text-align: center; padding: 3rem; color: var(--text-muted);">暂无发票数据</div>';
+                }
+
+                function generateReturnedTable(items) {
+                    let html = `<div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg); overflow-x: auto; background: var(--bg-card); margin-top: var(--spacing-md);">
+                <table class="table" style="margin: 0; border: none;">
+                <thead><tr>
+                    <th style="width:40px;"></th>
+                    <th>PO号</th><th>SAP号</th><th>图纸/图片</th><th>物料名称</th><th>数量信息</th><th>送货记录</th><th>退货说明 & 处理要求</th>
+                </tr></thead><tbody>`;
+
+                    items.forEach(item => {
+                        const isChecked = selectedIds.has(item.id) ? 'checked' : '';
+                        const retDate = item.return_info?.return_date ? formatDate(item.return_info.return_date) : '-';
+                        const reason = item.return_info?.return_reason || '无特殊说明';
+                        const retQty = item.return_info?.return_qty || '-';
+
+                        html += `<tr>
+                    <td><input type="checkbox" class="item-checkbox doc-group-returned" data-id="${item.id}" ${isChecked} onchange="toggleItemSelection(${item.id})"></td>
+                    <td><strong>${item.po_number || '-'}</strong></td>
+                    <td>${item.material?.sap_code || '-'}</td>
+                    <td>
+                        <div class="material-thumb">
+                            ${item.material?.image ? `<img src="${item.material.image}" class="thumb-item" onclick="openLightbox('${item.material.image}', 'image')">` : ''}
+                            ${item.material?.drawing_pdf ? `<div class="pdf-mini" onclick="openLightbox('${item.material.drawing_pdf}', 'pdf')">📘</div>` : ''}
+                        </div>
+                    </td>
+                    <td>${item.material?.name_cn || '-'} / ${item.material?.name_vn || '-'}</td>
+                    <td>
+                        <div>订购: <strong>${item.ordered_qty}</strong></div>
+                        <div style="color:var(--color-danger);">退货: <strong>${retQty}</strong></div>
+                    </td>
+                    <td>
+                        <div style="font-size:0.85em; color:var(--text-secondary);">曾发货日期: ${item.actual_delivery_date ? formatDate(item.actual_delivery_date) : '-'}</div>
+                    </td>
+                    <td>
+                        <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.3); padding: var(--spacing-sm); border-radius: var(--radius-sm);">
+                            <div style="color: var(--color-danger); font-size: 0.85rem; margin-bottom: 2px;">退回时间: ${retDate}</div>
+                            <div style="font-size: 0.9rem;"><strong>原因:</strong> ${reason}</div>
+                        </div>
+                    </td>
+                </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                    return html;
+                }
+
+                function getStatusClass(status) {
+                    const classes = {
+                        '未下单': 'neutral',
+                        '已下单': 'info',
+                        '已送货': 'warning',
+                        '已收货': 'success',
+                        '已开发票': 'success'
+                    };
+                    return classes[status] || 'neutral';
+                }
+
+                function toggleItemSelection(id) {
+                    if (selectedIds.has(id)) {
+                        selectedIds.delete(id);
+                    } else {
+                        selectedIds.add(id);
+                    }
+                    updateSelectionUI();
+                }
+
+                function toggleSelectAll() {
+                    const checkboxes = document.querySelectorAll('.item-checkbox');
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+                    if (!allChecked) {
+                        allItems.forEach(item => selectedIds.add(item.id));
+                    } else {
+                        selectedIds.clear();
+                    }
+
+                    checkboxes.forEach(cb => cb.checked = !allChecked);
+                    updateSelectionUI();
+                }
+
+                function updateSelectionUI() {
+                    document.getElementById('selectedCount').textContent = `已选择 ${selectedIds.size} 项`;
+                    
+                    const hasUnconfirmed = Array.from(selectedIds).some(id => allItems.find(i => i.id === id)?.item_status === '未确认' || allItems.find(i => i.id === id)?.item_status === '已下单');
+                    const hasConfirmed = Array.from(selectedIds).some(id => allItems.find(i => i.id === id)?.item_status === '已确认');
+                    
+                    const btnQuotation = document.getElementById('btnQuotation');
+                    if(btnQuotation) btnQuotation.disabled = selectedIds.size === 0 || hasUnconfirmed;
+                    
+                    const btnConfirm = document.getElementById('btnConfirm');
+                    if (btnConfirm) btnConfirm.disabled = selectedIds.size === 0 || hasConfirmed;
+
+                    document.getElementById('btnDelivering').disabled = selectedIds.size === 0 || hasUnconfirmed;
+                    document.getElementById('btnInvoice').disabled = selectedIds.size === 0;
+                    document.getElementById('btnRedelivery').disabled = selectedIds.size === 0;
+                }
+
+                async function reassignInvoice(itemId, newInvoiceFile) {
+                    if(!newInvoiceFile) return;
+                    if(!confirm('确定要将该项移动到选定的发票组吗？')) {
+                        loadItems(currentPage); // Reset select visualization
+                        return;
+                    }
+                    try {
+                        await api.put(`/supplier/items/${itemId}/invoice`, { invoice_file: newInvoiceFile });
+                        showToast('发票关联已成功更新');
+                        loadItems(currentPage);
+                    } catch(e) {
+                        showToast('修改失败: ' + e.message, 'error');
+                        loadItems(currentPage);
+                    }
+                }
+
+                async function batchConfirmOrders() {
+                    if (selectedIds.size === 0) return;
+                    if (!confirm(`确定要确认选中的 ${selectedIds.size} 项订单吗？\n确认后即可安排发货。`)) return;
+
+                    try {
+                        const result = await api.post('/supplier/batch-confirm', {
+                            item_ids: Array.from(selectedIds)
+                        });
+                        showToast(result.message);
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('确认订单失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function batchSetStatus(status) {
+                    if (selectedIds.size === 0) return;
+
+                    try {
+                        await api.put('/supplier/items/batch-status', {
+                            item_ids: Array.from(selectedIds),
+                            item_status: status
+                        });
+                        showToast(`已更新 ${selectedIds.size} 项状态为 "${status}"`);
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('更新失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function updatePrice(itemId, price) {
+                    if (!price || isNaN(parseFloat(price))) {
+                        showToast('请输入有效价格', 'warning');
+                        return;
+                    }
+                    try {
+                        // Find order_id for this item
+                        const item = allItems.find(i => i.id === itemId);
+                        if (!item) return;
+
+                        await api.post(`/supplier/orders/${item.order_id}/items/${itemId}/quote`, {
+                            quoted_price: parseFloat(price),
+                            notes: ''
+                        });
+                        showToast('价格已更新');
+                    } catch (error) {
+                        showToast('更新失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function updateItemPrice(itemId, price, currency) {
+                    if (!price || isNaN(parseFloat(price))) {
+                        showToast('请输入有效价格', 'warning');
+                        return;
+                    }
+                    try {
+                        await api.put(`/supplier/items/${itemId}/price`, {
+                            unit_price: parseFloat(price),
+                            currency: currency || 'VND'
+                        });
+                        showToast('单价已更新');
+                    } catch (error) {
+                        showToast('更新失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function toggleSupplierCurrency(itemId, btn) {
+                    const current = btn.textContent.trim();
+                    const newCurrency = current === 'VND' ? 'USD' : 'VND';
+                    // Find the price input sibling
+                    const priceInput = btn.parentElement.querySelector('input[type=number]');
+                    const price = priceInput ? parseFloat(priceInput.value) : null;
+                    try {
+                        await api.put(`/supplier/items/${itemId}/price`, {
+                            unit_price: price || 0,
+                            currency: newCurrency
+                        });
+                        btn.textContent = newCurrency;
+                        showToast(`货币已切换为 ${newCurrency}`);
+                    } catch (error) {
+                        showToast('切换失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function updateStatus(itemId, status) {
+                    try {
+                        const item = allItems.find(i => i.id === itemId);
+                        if (!item) return;
+
+                        await api.put(`/supplier/orders/${item.order_id}/items/${itemId}/status`, {
+                            item_status: status
+                        });
+                        showToast('状态已更新');
+                        // Update local data
+                        item.item_status = status;
+                        updateStats(allItems);
+                    } catch (error) {
+                        showToast('更新失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function uploadQuotation(itemId, input) {
+                    if (!input.files || !input.files[0]) return;
+
+                    const item = allItems.find(i => i.id === itemId);
+                    if (!item) return;
+
+                    const formData = new FormData();
+                    formData.append('file', input.files[0]);
+
+                    try {
+                        await api.upload(`/supplier/orders/${item.order_id}/items/${itemId}/quotation`, formData);
+                        showToast('报价单上传成功');
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('上传失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function uploadInvoice(itemId, input) {
+                    if (!input.files || !input.files[0]) return;
+
+                    const formData = new FormData();
+                    formData.append('file', input.files[0]);
+
+                    try {
+                        await api.upload(`/supplier/invoice/${itemId}`, formData);
+                        showToast('发票上传成功');
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('上传失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function deleteDocument(itemId, docType, isSingle = false) {
+                    let msg = `确定删除此${docType === 'quotation' ? '报价单' : docType === 'delivery' ? '送货单' : '发票'}吗？`;
+                    if (isSingle && docType !== 'quotation') {
+                        msg = `确定将此条目单独退回到上一阶段吗？(这通常用于个别包裹异常，此操作将清除其目前的${docType === 'delivery' ? '送货单' : '发票'}绑定)`;
+                    } else if (!isSingle && docType !== 'quotation') {
+                        msg = `确定要整体退回这个批次的所有条目吗？(这通常用于发错货导致的整体撤回，同文件的订单项将集体退回)`;
+                    }
+                    if (!await confirmDialog(msg)) {
+                        return;
+                    }
+
+                    try {
+                        // Determine whether to do batch rollback based on `isSingle`
+                        let rollbackUrl = `/supplier/document/${itemId}/${docType}`;
+                        if (isSingle) {
+                            rollbackUrl += `?single=true`;
+                        }
+
+                        await api.delete(rollbackUrl);
+                        showToast('删除成功');
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('删除失败: ' + error.message, 'error');
+                    }
+                }
+
+                function openLightbox(src, type) {
+                    const content = document.getElementById('lightboxContent');
+                    if (type === 'image') {
+                        content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <img src="${src}" alt="预览">
+                `;
+                    } else if (type === 'pdf') {
+                        content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <iframe src="${src}"></iframe>
+                `;
+                    }
+                    document.getElementById('lightbox').classList.add('active');
+                }
+
+                function closeLightbox(event) {
+                    if (event.target.id === 'lightbox' || event.target.classList.contains('lightbox-close')) {
+                        document.getElementById('lightbox').classList.remove('active');
+                    }
+                }
+
+                function logout() {
+                    window._isNavigating = true;
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/';
+                }
+
+                // Check if date is overdue
+                function isOverdue(dateStr) {
+                    if (!dateStr) return false;
+                    const date = new Date(dateStr);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today;
+                }
+
+                // Delivery modal functions
+                function openDeliveryModal() {
+                    if (selectedIds.size === 0) return;
+                    
+                    // Check for mixed confirmed/unconfirmed selection
+                    const hasUnconfirmed = Array.from(selectedIds).some(id => {
+                        const item = allItems.find(i => i.id === id);
+                        return item && item.item_status === '已下单';
+                    });
+                    if (hasUnconfirmed) {
+                        alert('选中的订单包含未确认项，请先确认后再进入送货流程');
+                        return;
+                    }
+
+                    // Set default delivery date to today
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('deliveryDate').value = today;
+                    document.getElementById('deliveryNote').value = '';
+                    document.getElementById('selectedItemsCount').textContent = selectedIds.size;
+
+                    openModal('deliveryModal');
+                }
+
+                async function submitDelivery() {
+                    const deliveryDate = document.getElementById('deliveryDate').value;
+                    const noteInput = document.getElementById('deliveryNote');
+
+                    if (!deliveryDate) {
+                        showToast('请选择送货日期', 'warning');
+                        return;
+                    }
+
+                    if (!noteInput.files || !noteInput.files[0]) {
+                        showToast('请上传送货单', 'warning');
+                        return;
+                    }
+
+                    try {
+                        // Upload delivery note for each selected item
+                        const formData = new FormData();
+                        formData.append('file', noteInput.files[0]);
+                        formData.append('delivery_date', deliveryDate);
+                        formData.append('item_ids', JSON.stringify(Array.from(selectedIds)));
+
+                        // Collect item quantity splits
+                        const itemQtys = {};
+                        selectedIds.forEach(id => {
+                            const input = document.getElementById(`deliveryQty_${id}`);
+                            if (input) {
+                                itemQtys[id] = parseFloat(input.value) || 0;
+                            }
+                        });
+                        formData.append('item_qtys', JSON.stringify(itemQtys));
+
+                        await api.upload('/supplier/delivery-notes', formData);
+
+                        // Assuming API auto-updates status, no manual refresh needed for status batch update
+
+                        showToast(`已成功处理 ${selectedIds.size} 项物料的送货信息`);
+                        closeModal('deliveryModal');
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadItems(currentPage);
+
+                    } catch (error) {
+                        showToast('提交失败: ' + error.message, 'error');
+                    }
+                }
+
+                // Load on start - restore last active tab if any
+                const savedTab = localStorage.getItem('supplierAdminTab');
+                if (savedTab && ['pending', 'delivered', 'invoiced', 'returned'].includes(savedTab)) {
+                    switchTab(savedTab);
+                } else {
+                    loadItems();
+                }
+            </script>
+
+            <!-- Delivery Modal -->
+            <div class="modal-overlay" id="deliveryModal">
+                <div class="modal" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>📦 送货信息</h3>
+                        <button class="modal-close" onclick="closeModal('deliveryModal')">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div
+                            style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                            <strong>已选择 <span id="selectedItemsCount">0</span> 项物料</strong>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">送货日期 *</label>
+                            <input type="date" class="form-input" id="deliveryDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">送货单 (PDF) *</label>
+                            <div class="file-upload-area" onclick="document.getElementById('deliveryNote').click()"
+                                id="deliveryNoteArea"
+                                style="border: 2px dashed var(--border-color); padding: var(--spacing-lg); text-align: center; cursor: pointer; border-radius: var(--radius-md);">
+                                <input type="file" id="deliveryNote" accept=".pdf" style="display: none;"
+                                    onchange="updateDeliveryNotePreview(this)">
+                                <div id="deliveryNotePreview">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5"
+                                        style="margin-bottom: var(--spacing-sm); color: var(--text-muted);">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="12" y1="18" x2="12" y2="12" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                    <div style="color: var(--text-muted);">点击上传送货单 PDF</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal('deliveryModal')">取消</button>
+                        <button class="btn btn-primary" onclick="submitDelivery()">确认送货</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quotation Modal -->
+            <div class="modal-overlay" id="quotationModal">
+                <div class="modal" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>📋 上传报价单</h3>
+                        <button class="modal-close" onclick="closeModal('quotationModal')">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div
+                            style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                            <strong>已选择 <span id="quotationItemsCount">0</span> 项物料</strong>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">报价日期 *</label>
+                            <input type="date" class="form-input" id="quotationDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">报价单 (PDF) *</label>
+                            <div class="file-upload-area" onclick="document.getElementById('quotationFile').click()"
+                                id="quotationFileArea"
+                                style="border: 2px dashed var(--border-color); padding: var(--spacing-lg); text-align: center; cursor: pointer; border-radius: var(--radius-md);">
+                                <input type="file" id="quotationFile" accept=".pdf" style="display: none;"
+                                    onchange="updateFilePreview(this, 'quotationFilePreview', 'quotationFileArea')">
+                                <div id="quotationFilePreview">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5"
+                                        style="margin-bottom: var(--spacing-sm); color: var(--text-muted);">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="12" y1="18" x2="12" y2="12" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                    <div style="color: var(--text-muted);">点击上传报价单 PDF</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal('quotationModal')">取消</button>
+                        <button class="btn btn-primary" onclick="submitQuotation()">确认上传</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Modal -->
+            <div class="modal-overlay" id="invoiceModal">
+                <div class="modal" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>🧾 上传发票</h3>
+                        <button class="modal-close" onclick="closeModal('invoiceModal')">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div
+                            style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                            <strong>已选择 <span id="invoiceItemsCount">0</span> 项物料</strong>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">发票日期 *</label>
+                            <input type="date" class="form-input" id="invoiceDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">发票 (PDF) *</label>
+                            <div class="file-upload-area" onclick="document.getElementById('invoiceFile').click()"
+                                id="invoiceFileArea"
+                                style="border: 2px dashed var(--border-color); padding: var(--spacing-lg); text-align: center; cursor: pointer; border-radius: var(--radius-md);">
+                                <input type="file" id="invoiceFile" accept=".pdf" style="display: none;"
+                                    onchange="updateFilePreview(this, 'invoiceFilePreview', 'invoiceFileArea')">
+                                <div id="invoiceFilePreview">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.5"
+                                        style="margin-bottom: var(--spacing-sm); color: var(--text-muted);">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="12" y1="18" x2="12" y2="12" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                    <div style="color: var(--text-muted);">点击上传发票 PDF</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal('invoiceModal')">取消</button>
+                        <button class="btn btn-success" onclick="submitInvoice()">确认上传</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function updateDeliveryNotePreview(input) {
+                    const preview = document.getElementById('deliveryNotePreview');
+                    if (input.files && input.files[0]) {
+                        preview.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <span>${input.files[0].name}</span>
+                    </div>
+                `;
+                        document.getElementById('deliveryNoteArea').style.borderColor = 'var(--color-success)';
+                    }
+                }
+
+                function updateFilePreview(input, previewId, areaId) {
+                    const preview = document.getElementById(previewId);
+                    if (input.files && input.files[0]) {
+                        preview.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <span>${input.files[0].name}</span>
+                    </div>
+                `;
+                        document.getElementById(areaId).style.borderColor = 'var(--color-success)';
+                    }
+                }
+
+                function openQuotationModal() {
+                    if (selectedIds.size === 0) return;
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('quotationDate').value = today;
+                    document.getElementById('quotationFile').value = '';
+                    document.getElementById('quotationItemsCount').textContent = selectedIds.size;
+                    document.getElementById('quotationFilePreview').innerHTML = `
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: var(--spacing-sm); color: var(--text-muted);">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+                <div style="color: var(--text-muted);">点击上传报价单 PDF</div>
+            `;
+                    document.getElementById('quotationFileArea').style.borderColor = 'var(--border-color)';
+                    openModal('quotationModal');
+                }
+
+                function openInvoiceModal() {
+                    if (selectedIds.size === 0) return;
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('invoiceDate').value = today;
+                    document.getElementById('invoiceFile').value = '';
+                    document.getElementById('invoiceItemsCount').textContent = selectedIds.size;
+                    document.getElementById('invoiceFilePreview').innerHTML = `
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: var(--spacing-sm); color: var(--text-muted);">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+                <div style="color: var(--text-muted);">点击上传发票 PDF</div>
+            `;
+                    document.getElementById('invoiceFileArea').style.borderColor = 'var(--border-color)';
+                    openModal('invoiceModal');
+                }
+
+                async function submitQuotation() {
+                    const dateValue = document.getElementById('quotationDate').value;
+                    const fileInput = document.getElementById('quotationFile');
+
+                    if (!dateValue) {
+                        showToast('请选择报价日期', 'warning');
+                        return;
+                    }
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        showToast('请上传报价单', 'warning');
+                        return;
+                    }
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', fileInput.files[0]);
+                        formData.append('quotation_date', dateValue);
+                        formData.append('item_ids', JSON.stringify(Array.from(selectedIds)));
+
+                        await api.upload('/supplier/quotations', formData);
+                        showToast(`已上传报价单，关联 ${selectedIds.size} 项物料`);
+                        closeModal('quotationModal');
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('上传失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function submitInvoice() {
+                    const dateValue = document.getElementById('invoiceDate').value;
+                    const fileInput = document.getElementById('invoiceFile');
+
+                    if (!dateValue) {
+                        showToast('请选择发票日期', 'warning');
+                        return;
+                    }
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        showToast('请上传发票', 'warning');
+                        return;
+                    }
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', fileInput.files[0]);
+                        formData.append('invoice_date', dateValue);
+                        formData.append('item_ids', JSON.stringify(Array.from(selectedIds)));
+
+                        await api.upload('/supplier/invoices', formData);
+                        showToast(`已上传发票，关联 ${selectedIds.size} 项物料`);
+                        closeModal('invoiceModal');
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadItems(currentPage);
+                    } catch (error) {
+                        showToast('上传失败: ' + error.message, 'error');
+                    }
+                }
+
+                async function updatePrice(orderId, itemId, price) {
+                    if (!price) return;
+                    try {
+                        await api.post(`/supplier/orders/${orderId}/items/${itemId}/quote`, {
+                            quoted_price: parseFloat(price)
+                        });
+                        showToast('单价更新成功');
+                        if (window.loadItems) {
+                            // Update stats locally or reload items silently if you want
+                            // We can just show the toast, the input already has the value.
+                        }
+                    } catch (error) {
+                        showToast('更新失败: ' + error.message, 'error');
+                    }
+                }
+
+                // ===== Price History Modal with SVG Chart =====
+                async function openPriceHistory(materialId) {
+                    try {
+                        const user = JSON.parse(localStorage.getItem('user'));
+                        const supplierId = user ? user.id : '';
+                        const data = await api.get(`/materials/${materialId}/price-history?supplier_id=${supplierId}`);
+
+                        let html = `
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <h3 style="margin-bottom: var(--spacing-sm);">${data.material.name_cn}</h3>
+                        <span class="badge badge-neutral">${data.material.sap_code}</span>
+                    </div>
+                `;
+
+                        if (data.suppliers.length === 0) {
+                            html += '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">暂无历史价格数据</p>';
+                        } else {
+                            window.priceHistoryData = data.suppliers;
+
+                            html += `
+                        <div id="priceChartContainer" style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                            <svg id="priceChart" viewBox="0 0 400 200" style="width: 100%; height: 200px;"></svg>
+                        </div>
+                    `;
+
+                            html += `<div id="priceListContainer" style="max-height: 250px; overflow-y: auto;">`;
+                            for (const supplier of data.suppliers) {
+                                html += `
+                            <div style="margin-bottom: var(--spacing-md);">
+                                <h5 style="color: var(--accent-primary); margin-bottom: var(--spacing-sm);">您的历史供货单价</h5>
+                                ${supplier.prices.map(p => `
+                                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.875rem;">
+                                        <span><strong>${formatCurrency(p.price)}</strong></span>
+                                        <span style="color: var(--text-muted);">${p.date ? formatDate(p.date) : '-'} · ${p.source}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                            }
+                            html += `</div>`;
+                        }
+
+                        document.getElementById('lightboxContent').innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <div style="background: var(--bg-card); padding: var(--spacing-xl); border-radius: var(--radius-lg); width: 600px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
+                        ${html}
+                    </div>
+                `;
+                        document.getElementById('lightbox').classList.add('active');
+                        document.body.style.overflow = 'hidden';
+
+                        if (data.suppliers.length > 0) {
+                            setTimeout(() => drawPriceChart('all'), 100);
+                        }
+                    } catch (error) {
+                        showToast('加载价格历史失败: ' + error.message, 'error');
+                    }
+                }
+
+                function drawPriceChart(filter) {
+                    const svg = document.getElementById('priceChart');
+                    if (!svg || !window.priceHistoryData) return;
+
+                    let allPoints = [];
+                    const colors = ['#0ea5e9']; // Only one supplier
+
+                    window.priceHistoryData.forEach((supplier, idx) => {
+                        supplier.prices.forEach(p => {
+                            allPoints.push({ price: p.price, date: new Date(p.date), color: colors[0] });
+                        });
+                    });
+
+                    if (allPoints.length === 0) {
+                        svg.innerHTML = '<text x="200" y="100" text-anchor="middle" fill="var(--text-muted)">无数据</text>';
+                        return;
+                    }
+
+                    allPoints.sort((a, b) => a.date - b.date);
+
+                    const minPrice = Math.min(...allPoints.map(p => p.price));
+                    const maxPrice = Math.max(...allPoints.map(p => p.price));
+                    const priceRange = maxPrice - minPrice || 1;
+
+                    const padding = { top: 20, bottom: 30, left: 60, right: 20 };
+                    const width = 400 - padding.left - padding.right;
+                    const height = 200 - padding.top - padding.bottom;
+
+                    let svgContent = `
+                <g transform="translate(${padding.left}, ${padding.top})">
+                    <line x1="0" y1="0" x2="0" y2="${height}" stroke="var(--border-color)" stroke-width="1"/>
+                    <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="var(--border-color)" stroke-width="1"/>
+                    <text x="-5" y="10" text-anchor="end" fill="var(--text-muted)" font-size="10">${formatNumber(maxPrice)}</text>
+                    <text x="-5" y="${height}" text-anchor="end" fill="var(--text-muted)" font-size="10">${formatNumber(minPrice)}</text>
+            `;
+
+                    if (allPoints.length === 1) {
+                        const x = width / 2;
+                        const y = height / 2;
+                        svgContent += `<circle cx="${x}" cy="${y}" r="4" fill="${allPoints[0].color}"/>`;
+                    } else {
+                        const step = width / (allPoints.length - 1);
+                        let path = '';
+                        allPoints.forEach((p, i) => {
+                            const x = i * step;
+                            const y = height - ((p.price - minPrice) / priceRange) * height;
+                            if (i === 0) path += `M${x},${y}`;
+                            else path += ` L${x},${y}`;
+                        });
+                        svgContent += `<path d="${path}" fill="none" stroke="${allPoints[0].color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+                        allPoints.forEach((p, i) => {
+                            const x = i * step;
+                            const y = height - ((p.price - minPrice) / priceRange) * height;
+                            svgContent += `<circle cx="${x}" cy="${y}" r="3" fill="${p.color}"/>`;
+                        });
+                    }
+
+                    svgContent += '</g>';
+                    svg.innerHTML = svgContent;
+                }
+
+                function formatNumber(n) {
+                    const num = Number(n);
+                    if (isNaN(num)) return '0';
+                    const parts = String(num).split('.');
+                    const decimals = parts.length > 1 ? parts[1].length : 0;
+                    return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+                }
+
+                // --- Redelivery Flow ---
+                function openRedeliveryModal() {
+                    if (selectedIds.size === 0) {
+                        showToast('请先选择不良品', 'warning');
+                        return;
+                    }
+                    if (selectedIds.size > 1) {
+                        showToast('重新送货只能单次处理一条记录，请单选', 'warning');
+                        return;
+                    }
+                    const itemId = Array.from(selectedIds)[0];
+                    const item = allItems.find(i => i.id === itemId);
+                    if (!item || item.item_status !== '退货中') {
+                        showToast('该物料不处于退货状态，无法操作', 'warning');
+                        return;
+                    }
+                    document.getElementById('redeliveryDateInput').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('redeliveryExplanationInput').value = '';
+                    openModal('redeliveryModal');
+                }
+
+                async function submitRedelivery(e) {
+                    e.preventDefault();
+                    const itemId = Array.from(selectedIds)[0];
+                    const submitBtn = e.target.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '提交中...';
+
+                        const data = {
+                            redelivery_date: document.getElementById('redeliveryDateInput').value,
+                            explanation: document.getElementById('redeliveryExplanationInput').value
+                        };
+
+                        await api.post(`/supplier/returns/${itemId}/redeliver`, data);
+
+                        showToast('已成功记录重新交货信息', 'success');
+                        closeModal('redeliveryModal');
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadItems(); // Reload
+
+                    } catch (error) {
+                        console.error('Redelivery submission error:', error);
+                        showToast(error.message || '提交失败', 'error');
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    }
+                }
+
+            </script>
+
+            <style>
+                .lightbox {
+                    display: none;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.8);
+                    z-index: 2000;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .lightbox.active {
+                    display: flex;
+                    opacity: 1;
+                }
+
+                .lightbox-close {
+                    position: absolute;
+                    top: var(--spacing-lg);
+                    right: var(--spacing-lg);
+                    color: white;
+                    background: none;
+                    border: none;
+                    font-size: 2rem;
+                    cursor: pointer;
+                    z-index: 2001;
+                }
+            </style>
+            <!-- Lightbox for Price Chart -->
+            <div class="lightbox" id="lightbox" onclick="if(event.target===this) closeLightbox(event)">
+                <div class="lightbox-content" id="lightboxContent"
+                    style="padding: 0; background: transparent; box-shadow: none;">
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备监控 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <!-- Chart.js for real-time charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .device-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+
+        .device-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+        }
+
+        .device-card.online::before {
+            background: var(--color-success);
+        }
+
+        .device-card.offline::before {
+            background: var(--color-danger);
+        }
+
+        .device-card.warning::before {
+            background: var(--color-warning);
+            animation: pulse 2s infinite;
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .device-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .device-location {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-indicator.online {
+            background: var(--color-success);
+            box-shadow: 0 0 8px var(--color-success);
+        }
+
+        .status-indicator.offline {
+            background: var(--color-danger);
+        }
+
+        .status-indicator.warning {
+            background: var(--color-warning);
+            animation: pulse 2s infinite;
+        }
+
+        .device-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+
+        .device-stat {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+        }
+
+        .stat-value.high {
+            color: var(--color-danger);
+        }
+
+        .stat-value.normal {
+            color: var(--accent-primary);
+        }
+
+        .stat-value.low {
+            color: var(--color-success);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--accent-gradient);
+        }
+
+        .summary-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+        }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            height: 300px;
+            position: relative;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--color-success);
+            border-radius: var(--radius-xl);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .live-indicator::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--color-success);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        .mini-chart {
+            height: 60px;
+            margin-top: var(--spacing-md);
+        }
+
+        @media (max-width: 768px) {
+            .summary-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>设备监控</h1>
+                    <span class="live-indicator">LIVE</span>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" onclick="simulateAllDevices()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        模拟数据
+                    </button>
+                    <button class="btn btn-primary" onclick="openModal('addDeviceModal')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                        添加设备
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-cards" id="summaryCards">
+                <div class="summary-card">
+                    <div class="summary-value" style="color: var(--accent-primary);" id="totalDevices">0</div>
+                    <div class="summary-label">设备总数</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" style="color: var(--color-success);" id="onlineDevices">0</div>
+                    <div class="summary-label">在线设备</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" style="color: var(--color-warning);" id="warningDevices">0</div>
+                    <div class="summary-label">告警设备</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" style="color: var(--color-danger);" id="offlineDevices">0</div>
+                    <div class="summary-label">离线设备</div>
+                </div>
+            </div>
+
+            <!-- Real-time Chart Section -->
+            <div class="card" style="margin-bottom: var(--spacing-xl);">
+                <div class="card-header">
+                    <h3 class="card-title">实时数据监控</h3>
+                    <select class="form-select" id="chartDeviceSelect" onchange="updateChart()" style="width: auto;">
+                        <option value="">选择设备查看图表</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="realtimeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Device Grid -->
+            <h3 style="margin-bottom: var(--spacing-lg);">所有设备</h3>
+            <div class="device-grid" id="deviceGrid">
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                    加载中...
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Device Modal -->
+    <div class="modal-overlay" id="addDeviceModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>添加设备</h3>
+                <button class="btn btn-icon" onclick="closeModal('addDeviceModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addDeviceForm">
+                    <div class="form-group">
+                        <label class="form-label">设备名称 *</label>
+                        <input type="text" class="form-input" name="name" required placeholder="如：主线焊接机1号">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">设备编码 *</label>
+                        <input type="text" class="form-input" name="code" required placeholder="如：WLD001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">设备类型</label>
+                        <select class="form-select" name="device_type">
+                            <option value="PLC">PLC控制器</option>
+                            <option value="传感器">传感器</option>
+                            <option value="电机">电机/马达</option>
+                            <option value="焊接机">焊接机</option>
+                            <option value="烤箱">烤箱/加热设备</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">位置</label>
+                        <input type="text" class="form-input" name="location" placeholder="如：主线A区">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label">IP地址</label>
+                            <input type="text" class="form-input" name="ip_address" placeholder="192.168.1.100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">端口</label>
+                            <input type="number" class="form-input" name="port" placeholder="502">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">MQTT主题</label>
+                        <input type="text" class="form-input" name="mqtt_topic"
+                            placeholder="voniko/devices/device_name">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addDeviceModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveDevice()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Detail Modal -->
+    <div class="modal-overlay" id="deviceDetailModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="deviceDetailTitle">设备详情</h3>
+                <button class="btn btn-icon" onclick="closeModal('deviceDetailModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="deviceDetailContent"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        let realtimeChart = null;
+        let chartData = {
+            labels: [],
+            temperature: [],
+            humidity: [],
+            vibration: []
+        };
+
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('realtimeChart').getContext('2d');
+            realtimeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: '温度 (°C)',
+                            data: chartData.temperature,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '湿度 (%)',
+                            data: chartData.humidity,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '振动 (mm/s)',
+                            data: chartData.vibration,
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    }
+                }
+            });
+        }
+
+        async function updateChart() {
+            const deviceId = document.getElementById('chartDeviceSelect').value;
+            if (!deviceId) return;
+
+            try {
+                // Use /data endpoint and process the array response
+                const history = await api.get(`/devices/${deviceId}/data?hours=24`);
+
+                // Group data by timestamp and data_type
+                const groups = {};
+                history.forEach(d => {
+                    const time = new Date(d.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                    if (!groups[time]) groups[time] = {};
+                    groups[time][d.data_type] = d.value;
+                });
+
+                const sortedLabels = Object.keys(groups).sort();
+
+                realtimeChart.data.labels = sortedLabels;
+                realtimeChart.data.datasets[0].data = sortedLabels.map(t => groups[t].temperature || null);
+                realtimeChart.data.datasets[1].data = sortedLabels.map(t => groups[t].humidity || null);
+                realtimeChart.data.datasets[2].data = sortedLabels.map(t => groups[t].vibration || null);
+                realtimeChart.update();
+            } catch (error) {
+                console.error('Chart update error:', error);
+            }
+        }
+
+        async function loadSummary() {
+            try {
+                const summary = await api.get('/devices/status/summary');
+                document.getElementById('totalDevices').textContent = summary.total || 0;
+                document.getElementById('onlineDevices').textContent = summary.running || 0;
+                document.getElementById('warningDevices').textContent = summary.fault || 0;
+                document.getElementById('offlineDevices').textContent = summary.stopped || 0;
+            } catch (error) {
+                console.error('Load summary error:', error);
+            }
+        }
+
+        async function loadDevices() {
+            const container = document.getElementById('deviceGrid');
+            const select = document.getElementById('chartDeviceSelect');
+
+            try {
+                // Backend returns array directly, not {items: [...]}
+                const devices = await api.get('/devices?limit=50');
+
+                // Populate chart dropdown
+                select.innerHTML = '<option value="">选择设备查看图表</option>' +
+                    devices.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+                if (devices.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 1rem;">
+                                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                                <rect x="9" y="9" width="6" height="6"/>
+                            </svg>
+                            <div>暂无设备，点击上方按钮添加设备</div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = devices.map(device => {
+                        const statusMap = { '运行': 'online', '停止': 'offline', '故障': 'warning' };
+                        const statusClass = statusMap[device.status] || 'offline';
+                        return `
+                        <div class="device-card ${statusClass}" onclick="viewDevice(${device.id})">
+                            <div class="device-header">
+                                <div>
+                                    <div class="device-name">${device.name}</div>
+                                    <div class="device-location">${device.location || device.device_type || device.code || '-'}</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="status-indicator ${statusClass}"></span>
+                                    <span style="font-size: 0.875rem; color: var(--text-muted);">${device.status || '未知'}</span>
+                                </div>
+                            </div>
+                            <div class="device-stats">
+                                <div class="device-stat">
+                                    <div class="stat-value normal">-</div>
+                                    <div class="stat-label">温度 °C</div>
+                                </div>
+                                <div class="device-stat">
+                                    <div class="stat-value normal">-</div>
+                                    <div class="stat-label">湿度 %</div>
+                                </div>
+                                <div class="device-stat">
+                                    <div class="stat-value normal">-</div>
+                                    <div class="stat-label">压力 kPa</div>
+                                </div>
+                                <div class="device-stat">
+                                    <div class="stat-value normal">-</div>
+                                    <div class="stat-label">振动 mm/s</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: var(--spacing-md); font-size: 0.75rem; color: var(--text-muted);">
+                                最后更新: ${device.last_online ? formatDateTime(device.last_online) : '从未'}
+                            </div>
+                        </div>
+                    `}).join('');
+
+                    // Auto-select first device for chart
+                    if (devices.length > 0 && !select.value) {
+                        select.value = devices[0].id;
+                        updateChart();
+                    }
+                }
+            } catch (error) {
+                container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--color-danger); padding: 2rem;">加载失败: ${error.message}</div>`;
+            }
+        }
+
+        function getStatusText(status) {
+            const texts = { online: '在线', offline: '离线', warning: '告警' };
+            return texts[status] || status;
+        }
+
+        function getTempClass(temp) {
+            if (!temp) return 'normal';
+            if (temp > 70) return 'high';
+            if (temp < 20) return 'low';
+            return 'normal';
+        }
+
+        function getVibClass(vib) {
+            if (!vib) return 'normal';
+            if (vib > 5) return 'high';
+            return 'normal';
+        }
+
+        async function saveDevice() {
+            const form = document.getElementById('addDeviceForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            data.port = data.port ? parseInt(data.port) : null;
+
+            try {
+                await api.post('/devices', data);
+                showToast('设备添加成功');
+                closeModal('addDeviceModal');
+                form.reset();
+                loadDevices();
+                loadSummary();
+            } catch (error) {
+                showToast('添加失败: ' + error.message, 'error');
+            }
+        }
+
+        async function viewDevice(id) {
+            try {
+                const device = await api.get(`/devices/${id}`);
+
+                document.getElementById('deviceDetailTitle').textContent = device.name;
+                document.getElementById('deviceDetailContent').innerHTML = `
+                    <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+                        <span class="status-indicator ${device.status}" style="width: 16px; height: 16px;"></span>
+                        <span class="badge badge-${device.status === 'online' ? 'success' : device.status === 'warning' ? 'warning' : 'danger'}">${getStatusText(device.status)}</span>
+                        <span style="color: var(--text-muted);">${device.device_type || '-'}</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">位置</div><div>${device.location || '-'}</div></div>
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">IP地址</div><div>${device.ip_address || '-'}${device.port ? ':' + device.port : ''}</div></div>
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">MQTT主题</div><div style="font-family: var(--font-mono); font-size: 0.875rem;">${device.mqtt_topic || '-'}</div></div>
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">最后在线</div><div>${device.last_seen ? formatDateTime(device.last_seen) : '从未'}</div></div>
+                    </div>
+                    
+                    <h4 style="margin-bottom: var(--spacing-md);">实时数据</h4>
+                    <div class="device-stats" style="margin-bottom: var(--spacing-xl);">
+                        <div class="device-stat">
+                            <div class="stat-value ${getTempClass(device.last_data?.temperature)}">${device.last_data?.temperature ?? '-'}</div>
+                            <div class="stat-label">温度 °C</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value normal">${device.last_data?.humidity ?? '-'}</div>
+                            <div class="stat-label">湿度 %</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value normal">${device.last_data?.pressure ?? '-'}</div>
+                            <div class="stat-label">压力 kPa</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value ${getVibClass(device.last_data?.vibration)}">${device.last_data?.vibration ?? '-'}</div>
+                            <div class="stat-label">振动 mm/s</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value normal">${device.last_data?.current ?? '-'}</div>
+                            <div class="stat-label">电流 A</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value normal">${device.last_data?.voltage ?? '-'}</div>
+                            <div class="stat-label">电压 V</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value normal">${device.last_data?.power ?? '-'}</div>
+                            <div class="stat-label">功率 W</div>
+                        </div>
+                        <div class="device-stat">
+                            <div class="stat-value normal">${device.last_data?.speed ?? '-'}</div>
+                            <div class="stat-label">转速 RPM</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: var(--spacing-md);">
+                        <button class="btn btn-secondary" onclick="simulateDevice(${device.id})">模拟数据</button>
+                    </div>
+                `;
+
+                openModal('deviceDetailModal');
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        async function simulateDevice(id) {
+            try {
+                await api.post(`/devices/simulate/${id}`);
+                showToast('模拟数据已推送');
+                viewDevice(id);
+                loadDevices();
+                updateChart();
+            } catch (error) {
+                showToast('模拟失败: ' + error.message, 'error');
+            }
+        }
+
+        async function simulateAllDevices() {
+            // Simulate data for all devices by pushing individual data points
+            try {
+                const devices = await api.get('/devices?limit=50');
+                if (devices.length === 0) {
+                    showToast('请先添加设备', 'warning');
+                    return;
+                }
+
+                for (const device of devices) {
+                    // Push random data for each device
+                    const dataTypes = ['temperature', 'humidity', 'vibration'];
+                    for (const type of dataTypes) {
+                        let value;
+                        if (type === 'temperature') value = 25 + Math.random() * 30;
+                        else if (type === 'humidity') value = 40 + Math.random() * 30;
+                        else value = 0.1 + Math.random() * 2;
+
+                        await api.post('/devices/data', {
+                            device_id: device.id,
+                            data_type: type,
+                            value: parseFloat(value.toFixed(2))
+                        });
+                    }
+                }
+
+                showToast(`已为 ${devices.length} 个设备生成模拟数据`);
+                loadDevices();
+                loadSummary();
+                updateChart();
+            } catch (error) {
+                showToast('模拟失败: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize
+        initChart();
+        loadSummary();
+        loadDevices();
+
+        // Auto refresh every 10 seconds
+        setInterval(() => {
+            loadSummary();
+            loadDevices();
+            if (document.getElementById('chartDeviceSelect').value) {
+                updateChart();
+            }
+        }, 10000);
+    </script>
+</body>
+
+</html>

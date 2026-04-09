@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务系统 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <style>
+        .task-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .task-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .task-card.priority-紧急::before {
+            background: var(--color-danger);
+        }
+
+        .task-card.priority-高::before {
+            background: var(--color-warning);
+        }
+
+        .task-card.priority-普通::before {
+            background: var(--accent-primary);
+        }
+
+        .task-card.priority-低::before {
+            background: var(--text-muted);
+        }
+
+        .task-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .task-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .task-meta {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-md);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .task-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .task-description {
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            margin-bottom: var(--spacing-md);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .task-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .rating-stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .rating-stars .star {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color var(--transition-fast);
+        }
+
+        .rating-stars .star.active,
+        .rating-stars .star:hover {
+            color: #fbbf24;
+        }
+
+        .status-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .status-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .status-tab:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .status-tab.active {
+            background: var(--accent-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .score-display {
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .score-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>任务系统</h1>
+                    <span class="badge" id="totalCount">0 个任务</span>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="openModal('createTaskModal')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                        发布任务
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="status-tabs">
+                <button class="status-tab active" onclick="filterStatus('', this)">全部</button>
+                <button class="status-tab" onclick="filterStatus('待认领', this)">待认领</button>
+                <button class="status-tab" onclick="filterStatus('进行中', this)">进行中</button>
+                <button class="status-tab" onclick="filterStatus('待验收', this)">待验收</button>
+                <button class="status-tab" onclick="filterStatus('已完成', this)">已完成</button>
+            </div>
+
+            <!-- Task Cards -->
+            <div class="task-cards" id="taskCards">
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                    加载中...
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div class="modal-overlay" id="createTaskModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>发布新任务</h3>
+                <button class="btn btn-icon" onclick="closeModal('createTaskModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    <div class="form-group">
+                        <label class="form-label">任务标题 *</label>
+                        <input type="text" class="form-input" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">任务描述</label>
+                        <textarea class="form-textarea" name="description" rows="4"></textarea>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label">优先级</label>
+                            <select class="form-select" name="priority">
+                                <option value="普通">普通</option>
+                                <option value="低">低</option>
+                                <option value="高">高</option>
+                                <option value="紧急">紧急</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">指派类型</label>
+                            <select class="form-select" name="is_public" onchange="toggleAssignee(this)">
+                                <option value="true">公开任务</option>
+                                <option value="false">指定人员</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="assigneeGroup" style="display: none;">
+                            <label class="form-label">指派给</label>
+                            <input type="text" class="form-input" name="assignee_name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">截止日期</label>
+                            <input type="date" class="form-input" name="deadline">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">预估工时(小时)</label>
+                            <input type="number" class="form-input" name="estimated_hours" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">奖励积分</label>
+                            <input type="number" class="form-input" name="reward_points" min="0" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createTaskModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveTask()">发布任务</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div class="modal-overlay" id="taskDetailModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="taskDetailTitle">任务详情</h3>
+                <button class="btn btn-icon" onclick="closeModal('taskDetailModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="taskDetailContent">
+            </div>
+        </div>
+    </div>
+
+    <!-- Evaluate Modal -->
+    <div class="modal-overlay" id="evaluateModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>任务评价</h3>
+                <button class="btn btn-icon" onclick="closeModal('evaluateModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="evaluateTaskId">
+                <div class="form-group">
+                    <label class="form-label">完成质量 (1-5)</label>
+                    <div class="rating-stars" id="qualityRating" data-value="0">
+                        <svg class="star" data-value="1" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="2" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="3" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="4" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="5" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">响应速度 (1-5)</label>
+                    <div class="rating-stars" id="speedRating" data-value="0">
+                        <svg class="star" data-value="1" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="2" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="3" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="4" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="5" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">沟通配合 (1-5)</label>
+                    <div class="rating-stars" id="commRating" data-value="0">
+                        <svg class="star" data-value="1" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="2" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="3" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="4" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="5" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">成本控制 (1-5)</label>
+                    <div class="rating-stars" id="costRating" data-value="0">
+                        <svg class="star" data-value="1" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="2" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="3" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="4" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        <svg class="star" data-value="5" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">评价备注</label>
+                    <textarea class="form-textarea" id="evaluateNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('evaluateModal')">取消</button>
+                <button class="btn btn-primary" onclick="submitEvaluation()">提交评价</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        let currentStatus = '';
+
+        function filterStatus(status, btn) {
+            document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            currentStatus = status;
+            loadTasks();
+        }
+
+        function toggleAssignee(select) {
+            document.getElementById('assigneeGroup').style.display = select.value === 'false' ? 'block' : 'none';
+        }
+
+        async function loadTasks() {
+            const container = document.getElementById('taskCards');
+
+            try {
+                let url = '/tasks?limit=50';
+                if (currentStatus) url += `&status=${encodeURIComponent(currentStatus)}`;
+
+                const data = await api.get(url);
+                document.getElementById('totalCount').textContent = `${data.total} 个任务`;
+
+                if (data.items.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">暂无任务</div>';
+                } else {
+                    container.innerHTML = data.items.map(task => `
+                        <div class="task-card priority-${task.priority}" onclick="viewTask(${task.id})">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-sm);">
+                                <span class="badge badge-${getStatusClass(task.status)}">${task.status}</span>
+                                <span class="badge badge-${getPriorityClass(task.priority)}">${task.priority}</span>
+                            </div>
+                            <div class="task-title">${task.title}</div>
+                            <div class="task-meta">
+                                ${task.deadline ? `<span class="task-meta-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${formatDate(task.deadline)}</span>` : ''}
+                                ${task.reward_points ? `<span class="task-meta-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ${task.reward_points}积分</span>` : ''}
+                            </div>
+                            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                            <div class="task-footer">
+                                <div>
+                                    ${task.is_public ? '<span style="color: var(--text-muted); font-size: 0.875rem;">公开任务</span>' : `<span style="color: var(--text-muted); font-size: 0.875rem;">指派给: ${task.assignee_name || '-'}</span>`}
+                                </div>
+                                ${task.status === '待认领' ? '<button class="btn btn-primary" onclick="event.stopPropagation(); claimTask(' + task.id + ')">认领</button>' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        function getStatusClass(status) {
+            const classes = { '待认领': 'warning', '进行中': 'info', '待验收': 'warning', '已完成': 'success' };
+            return classes[status] || 'neutral';
+        }
+
+        function getPriorityClass(priority) {
+            const classes = { '紧急': 'danger', '高': 'warning', '普通': 'info', '低': 'neutral' };
+            return classes[priority] || 'neutral';
+        }
+
+        async function saveTask() {
+            const form = document.getElementById('createTaskForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            data.is_public = data.is_public === 'true';
+            data.estimated_hours = data.estimated_hours ? parseFloat(data.estimated_hours) : null;
+            data.reward_points = parseInt(data.reward_points) || 0;
+
+            try {
+                await api.post('/tasks', data);
+                showToast('任务发布成功');
+                closeModal('createTaskModal');
+                form.reset();
+                loadTasks();
+            } catch (error) {
+                showToast('发布失败: ' + error.message, 'error');
+            }
+        }
+
+        async function viewTask(id) {
+            try {
+                const task = await api.get(`/tasks/${id}`);
+                document.getElementById('taskDetailTitle').textContent = task.title;
+
+                document.getElementById('taskDetailContent').innerHTML = `
+                    <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap; margin-bottom: var(--spacing-lg);">
+                        <span class="badge badge-${getStatusClass(task.status)}">${task.status}</span>
+                        <span class="badge badge-${getPriorityClass(task.priority)}">${task.priority}</span>
+                        ${task.reward_points ? `<span class="badge badge-info">${task.reward_points} 积分</span>` : ''}
+                    </div>
+                    
+                    ${task.description ? `<div style="margin-bottom: var(--spacing-lg);"><p>${task.description}</p></div>` : ''}
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">创建时间</div><div>${formatDateTime(task.created_at)}</div></div>
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">截止日期</div><div>${formatDate(task.deadline) || '-'}</div></div>
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">执行人</div><div>${task.assignee_name || (task.is_public ? '公开任务' : '-')}</div></div>
+                        <div><div style="color: var(--text-muted); font-size: 0.875rem;">预估工时</div><div>${task.estimated_hours ? task.estimated_hours + '小时' : '-'}</div></div>
+                    </div>
+                    
+                    ${task.status === '已完成' && task.score_quality ? `
+                        <div style="margin-bottom: var(--spacing-xl);">
+                            <h4 style="margin-bottom: var(--spacing-md);">评分</h4>
+                            <div class="score-display">
+                                <div class="score-item"><div class="score-value">${task.score_quality}</div><div class="score-label">完成质量</div></div>
+                                <div class="score-item"><div class="score-value">${task.score_speed}</div><div class="score-label">响应速度</div></div>
+                                <div class="score-item"><div class="score-value">${task.score_communication}</div><div class="score-label">沟通配合</div></div>
+                                <div class="score-item"><div class="score-value">${task.score_cost}</div><div class="score-label">成本控制</div></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                        ${task.status === '待认领' ? `<button class="btn btn-primary" onclick="claimTask(${task.id})">认领任务</button>` : ''}
+                        ${task.status === '待验收' ? `<button class="btn btn-primary" onclick="openEvaluate(${task.id})">验收评价</button>` : ''}
+                    </div>
+                `;
+
+                openModal('taskDetailModal');
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        async function claimTask(id) {
+            try {
+                await api.post(`/tasks/${id}/claim`);
+                showToast('任务认领成功');
+                closeModal('taskDetailModal');
+                loadTasks();
+            } catch (error) {
+                showToast('认领失败: ' + error.message, 'error');
+            }
+        }
+
+        function openEvaluate(id) {
+            document.getElementById('evaluateTaskId').value = id;
+            closeModal('taskDetailModal');
+            openModal('evaluateModal');
+        }
+
+        // Star rating functionality
+        document.querySelectorAll('.rating-stars').forEach(container => {
+            container.querySelectorAll('.star').forEach(star => {
+                star.addEventListener('click', () => {
+                    const value = parseInt(star.dataset.value);
+                    container.dataset.value = value;
+                    container.querySelectorAll('.star').forEach((s, idx) => {
+                        s.classList.toggle('active', idx < value);
+                    });
+                });
+            });
+        });
+
+        async function submitEvaluation() {
+            const taskId = document.getElementById('evaluateTaskId').value;
+            const quality = parseInt(document.getElementById('qualityRating').dataset.value);
+            const speed = parseInt(document.getElementById('speedRating').dataset.value);
+            const comm = parseInt(document.getElementById('commRating').dataset.value);
+            const cost = parseInt(document.getElementById('costRating').dataset.value);
+            const notes = document.getElementById('evaluateNotes').value;
+
+            if (!quality || !speed || !comm || !cost) {
+                showToast('请完成所有评分', 'warning');
+                return;
+            }
+
+            try {
+                await api.post(`/tasks/${taskId}/evaluate`, {
+                    score_quality: quality,
+                    score_speed: speed,
+                    score_communication: comm,
+                    score_cost: cost,
+                    evaluation_notes: notes
+                });
+                showToast('评价提交成功');
+                closeModal('evaluateModal');
+                loadTasks();
+            } catch (error) {
+                showToast('提交失败: ' + error.message, 'error');
+            }
+        }
+
+        loadTasks();
+    </script>
+</body>
+
+</html>

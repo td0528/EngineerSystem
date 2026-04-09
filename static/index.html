@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VONIKO工厂集成管理系统 - 采购、库存、任务、资料管理">
+    <title>VONIKO Factory Management</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <style>
+        /* Login page specific styles */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-2xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-gradient);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .login-logo h1 {
+            font-size: 2rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .login-logo p {
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+        }
+
+        .battery-animation {
+            width: 80px;
+            height: 40px;
+            margin: 0 auto var(--spacing-lg);
+            background: var(--bg-tertiary);
+            border: 2px solid var(--accent-primary);
+            border-radius: var(--radius-sm);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .battery-animation::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .battery-animation .charge {
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            bottom: 4px;
+            width: 0;
+            background: var(--accent-gradient);
+            border-radius: 2px;
+            animation: charging 2s ease-in-out infinite;
+        }
+
+        @keyframes charging {
+            0% {
+                width: 0;
+                opacity: 0.5;
+            }
+
+            50% {
+                width: calc(100% - 8px);
+                opacity: 1;
+            }
+
+            100% {
+                width: 0;
+                opacity: 0.5;
+            }
+        }
+
+        .login-form .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .login-form .btn-primary {
+            width: 100%;
+            padding: var(--spacing-md);
+            font-size: 1rem;
+        }
+
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: var(--spacing-lg);
+            font-size: 0.875rem;
+        }
+
+        .login-options label {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .supplier-login-link {
+            color: var(--accent-primary);
+        }
+
+        .tab-switcher {
+            display: flex;
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: var(--spacing-md);
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-size: 0.9375rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-lg);
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <div class="battery-animation">
+                    <div class="charge"></div>
+                </div>
+                <h1>VONIKO</h1>
+                <p>工厂集成管理系统</p>
+            </div>
+
+            <div class="tab-switcher">
+                <button class="tab-btn active" data-tab="user">员工登录</button>
+                <button class="tab-btn" data-tab="supplier">供应商登录</button>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <!-- User Login Form -->
+            <form class="login-form" id="userLoginForm">
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-input" id="username" placeholder="请输入用户名" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-input" id="password" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
+                    </svg>
+                    登录系统
+                </button>
+
+                <div class="login-options">
+                    <label>
+                        <input type="checkbox" id="rememberMe">
+                        记住我
+                    </label>
+                </div>
+            </form>
+
+            <!-- Supplier Login Form -->
+            <form class="login-form" id="supplierLoginForm" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">供应商代码</label>
+                    <input type="text" class="form-input" id="supplierCode" placeholder="请输入供应商代码" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-input" id="supplierPassword" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
+                    </svg>
+                    供应商登录
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const tab = btn.dataset.tab;
+                document.getElementById('userLoginForm').style.display = tab === 'user' ? 'block' : 'none';
+                document.getElementById('supplierLoginForm').style.display = tab === 'supplier' ? 'block' : 'none';
+                document.getElementById('errorMessage').classList.remove('show');
+            });
+        });
+
+        // Restore saved credentials (Remember Me)
+        const savedUser = localStorage.getItem('saved_username');
+        const savedPass = localStorage.getItem('saved_password');
+        const savedSupplierCode = localStorage.getItem('saved_supplier_code');
+        const savedSupplierPass = localStorage.getItem('saved_supplier_password');
+        if (savedUser) {
+            document.getElementById('username').value = savedUser;
+            document.getElementById('password').value = savedPass || '';
+            document.getElementById('rememberMe').checked = true;
+        }
+        if (savedSupplierCode) {
+            document.getElementById('supplierCode').value = savedSupplierCode;
+            document.getElementById('supplierPassword').value = savedSupplierPass || '';
+        }
+
+        // User login
+        document.getElementById('userLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            // Handle Remember Me
+            if (rememberMe) {
+                localStorage.setItem('saved_username', username);
+                localStorage.setItem('saved_password', password);
+            } else {
+                localStorage.removeItem('saved_username');
+                localStorage.removeItem('saved_password');
+            }
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    window.location.href = '/static/dashboard.html';
+                } else {
+                    showError(data.detail || '登录失败');
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+            }
+        });
+
+        // Supplier login
+        document.getElementById('supplierLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const code = document.getElementById('supplierCode').value;
+            const password = document.getElementById('supplierPassword').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            // Handle Remember Me for supplier too
+            if (rememberMe) {
+                localStorage.setItem('saved_supplier_code', code);
+                localStorage.setItem('saved_supplier_password', password);
+            } else {
+                localStorage.removeItem('saved_supplier_code');
+                localStorage.removeItem('saved_supplier_password');
+            }
+
+            try {
+                const response = await fetch('/api/auth/supplier/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `username=${encodeURIComponent(code)}&password=${encodeURIComponent(password)}`
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    window.location.href = '/static/supplier-portal.html';
+                } else {
+                    showError(data.detail || '登录失败');
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+            }
+        });
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        // Check if already logged in
+        if (localStorage.getItem('token')) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.is_supplier) {
+                window.location.href = '/static/supplier-portal.html';
+            } else {
+                window.location.href = '/static/dashboard.html';
+            }
+        }
+    </script>
+</body>
+
+</html>

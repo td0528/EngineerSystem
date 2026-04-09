@@ -1,0 +1,3035 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物料管理 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <style>
+        .material-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            background: var(--bg-tertiary);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+        }
+
+        .filter-bar .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .filter-bar select {
+            min-width: 150px;
+        }
+
+        .material-detail {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: var(--spacing-xl);
+        }
+
+        .material-info h4 {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .material-info p {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .price-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .quotation-list {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .quotation-item {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-viewer {
+            width: 100%;
+            height: 500px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+        }
+
+        /* Tag Input Styles */
+        .tag-input-container {
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            padding: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-height: 38px;
+            cursor: text;
+        }
+
+        .tag-badge {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 2px 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+        }
+
+        .tag-badge .remove-tag {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            line-height: 0.8;
+            display: flex;
+            align-items: center;
+        }
+
+        .tag-badge .remove-tag:hover {
+            color: var(--color-danger);
+        }
+
+        .tag-input-field {
+            border: none;
+            background: transparent;
+            outline: none;
+            flex: 1;
+            min-width: 80px;
+            color: var(--text-primary);
+            padding: 4px;
+            font-size: 0.875rem;
+        }
+
+        /* Multi-select dropdown styles */
+        .multi-select-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .multi-select-btn {
+            width: 100%;
+            padding: 0.4rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 4px;
+            text-align: left;
+        }
+
+        .multi-select-btn:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .multi-select-btn span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .multi-select-dropdown.show {
+            display: block;
+        }
+
+        .multi-select-item {
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .multi-select-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .multi-select-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent-primary);
+        }
+
+        /* Ensure table always fills available space */
+        .table-container {
+            min-height: 60vh;
+        }
+
+        #materialsBody {
+            min-height: 400px;
+        }
+
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: var(--radius-md);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-content iframe {
+            width: 80vw;
+            height: 85vh;
+            border: none;
+            border-radius: var(--radius-md);
+            background: white;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .lightbox-close:hover {
+            color: var(--accent-primary);
+        }
+
+        /* File upload area */
+        .file-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .file-upload-area.has-file {
+            border-color: var(--color-success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin-top: var(--spacing-sm);
+        }
+
+        .file-preview img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        .clickable-image {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .clickable-image:hover {
+            transform: scale(1.05);
+        }
+
+        /* Selectable table cells */
+        .table td {
+            user-select: text;
+            cursor: text;
+        }
+
+        .table td.selectable {
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+
+        .table td.selectable:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .table td.selectable::selection,
+        .table td.selectable *::selection {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        /* Column filter inputs */
+        .filter-row th {
+            padding: 0.5rem;
+            background: var(--bg-tertiary);
+        }
+
+        .filter-row input {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .filter-row input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .filter-row input::placeholder {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        /* Copy hint */
+        .copy-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Lightbox zoom controls */
+        .lightbox-controls {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .lightbox-controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .lightbox-controls button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .lightbox-content img.zoomable {
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+
+        .zoom-level {
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        /* Delete button in file preview */
+        .file-preview .delete-btn {
+            margin-left: auto;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--color-danger);
+            color: var(--color-danger);
+            padding: 0.3rem 0.6rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-preview .delete-btn:hover {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        /* PDF thumbnail in table */
+        .pdf-thumbnail {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--color-danger);
+        }
+
+        .pdf-thumbnail:hover {
+            background: var(--bg-secondary);
+            transform: scale(1.05);
+        }
+
+        /* Material thumbnail container */
+        .material-thumb {
+            position: relative;
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .material-thumb .thumb-item {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            object-fit: cover;
+        }
+
+        .material-thumb .thumb-item:hover {
+            transform: scale(1.1);
+        }
+
+        .material-thumb .pdf-mini {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--color-danger);
+        }
+
+        .material-thumb .pdf-mini:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Config modal tab buttons */
+        .tabs .btn-sm {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-fast);
+        }
+
+        .tabs .btn-sm:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .tabs .btn-sm.active {
+            background: var(--accent-gradient);
+            color: white;
+            border-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar included via JS -->
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1 data-i18n="materials.title">物料管理</h1>
+                    <span class="badge" id="totalCount">0 <span data-i18n="table.items">条物料</span></span>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="openAddMaterialModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                        <span data-i18n="btn.addMaterial">添加物料</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="openModal('importModal')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span data-i18n="btn.importData">导入数据</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportWithPrices()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <span data-i18n="btn.exportExcel">导出Excel</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="openConfigModal()" title="维护细分类别、设备等">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span data-i18n="btn.config">配置</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input type="text" class="form-input" id="searchInput" placeholder="搜索SAP号/中文名/越南语名/设备..."
+                        oninput="debouncedSearch()">
+                </div>
+            </div>
+
+            <!-- Materials Table -->
+            <div class="card">
+                <div class="copy-hint">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    提示：可直接选中表格内容复制到Excel
+                </div>
+                <div class="table-container">
+                    <table class="table" id="materialsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;"><input type="checkbox" id="selectAllMaterials"
+                                        onchange="toggleSelectAllMaterials(this)" title="全选"></th>
+                                <th data-i18n="materials.image">图片</th>
+                                <th class="sortable" onclick="sortTable('sap_code')"><span
+                                        data-i18n="materials.sapCode">SAP号码</span> <span class="sort-icon"></span></th>
+                                <th class="sortable" onclick="sortTable('name_cn')"><span
+                                        data-i18n="materials.nameCn">中文名称</span> <span class="sort-icon"></span></th>
+
+                                <th class="sortable" onclick="sortTable('subcategory')"><span
+                                        data-i18n="materials.subcategory">细分类别</span> <span class="sort-icon"></span>
+                                </th>
+                                <th class="sortable" onclick="sortTable('location')"><span
+                                        data-i18n="materials.location">库位</span> <span class="sort-icon"></span>
+                                </th>
+                                <th class="sortable" onclick="sortTable('workshop')"><span
+                                        data-i18n="materials.workshop">车间</span> <span class="sort-icon"></span>
+                                </th>
+                                <th class="sortable" onclick="sortTable('equipment')"><span
+                                        data-i18n="materials.equipment">使用设备</span> <span class="sort-icon"></span>
+                                </th>
+                                <th data-i18n="materials.actions">操作</th>
+                            </tr>
+                            <tr class="filter-row">
+                                <th></th>
+                                <th></th>
+                                <th><input type="text" id="filterSap" placeholder="筛选SAP..."
+                                        oninput="debouncedSearch()"></th>
+                                <th><input type="text" id="filterNameCn" placeholder="筛选名称..."
+                                        oninput="debouncedSearch()"></th>
+
+                                <th>
+                                    <div class="multi-select-container" id="subcategoryMultiSelect">
+                                        <button class="multi-select-btn"
+                                            onclick="toggleMultiSelect('subcategoryMultiSelect')">
+                                            <span id="subcategoryMultiLabel">全部</span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        <div class="multi-select-dropdown" id="subcategoryDropdown"></div>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="multi-select-container" id="locationMultiSelect">
+                                        <button class="multi-select-btn"
+                                            onclick="toggleMultiSelect('locationMultiSelect')">
+                                            <span id="locationMultiLabel">全部</span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        <div class="multi-select-dropdown" id="locationDropdown"></div>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="multi-select-container" id="workshopMultiSelect">
+                                        <button class="multi-select-btn"
+                                            onclick="toggleMultiSelect('workshopMultiSelect')">
+                                            <span id="workshopMultiLabel">全部</span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        <div class="multi-select-dropdown" id="workshopDropdown"></div>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="multi-select-container" id="equipmentMultiSelect">
+                                        <button class="multi-select-btn"
+                                            onclick="toggleMultiSelect('equipmentMultiSelect')">
+                                            <span id="equipmentMultiLabel">全部</span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        <div class="multi-select-dropdown" id="equipmentDropdown"></div>
+                                    </div>
+                                </th>
+                                <th>
+                                    <button class="btn btn-icon" onclick="clearColumnFilters()" title="清除筛选"
+                                        style="padding:0.3rem;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialsBody">
+                            <tr>
+                                <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                                    加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pagination"></div>
+                <!-- Batch Delete Bar -->
+                <div id="batchDeleteBar"
+                    style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg-secondary); border:1px solid var(--color-danger); border-radius:var(--radius-lg); padding:0.8rem 1.5rem; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:999; display:none; align-items:center; gap:1rem;">
+                    <span id="batchDeleteCount" style="font-weight:600;">已选择 0 项</span>
+                    <button class="btn" style="background:var(--color-danger); color:white; padding:0.4rem 1rem;"
+                        onclick="batchDeleteMaterials()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        批量删除
+                    </button>
+                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;"
+                        onclick="clearMaterialSelection()">取消选择</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>导入物料数据</h3>
+                <button class="btn btn-icon" onclick="closeModal('importModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div
+                    style="background: var(--bg-tertiary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                    <h5 style="margin-bottom: var(--spacing-sm); color: var(--text-primary);">📝这是如何工作的？</h5>
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">
+                        您可以上传 <strong>Notion 导出的 CSV</strong> 或 <strong>Excel 文件</strong>。<br>
+                        系统会自动识别列名（如：SAP号码、名称、种类、库存等）。<br>
+                        如果 SAP 号码已存在，将更新现有数据。
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="importFile">选择文件 (.csv, .xlsx)</label>
+                    <input type="file" id="importFile" class="form-input" accept=".csv, .xlsx, .xls">
+                </div>
+
+                <div id="importStatus"
+                    style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md); display: none;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importModal')">取消</button>
+                <button class="btn btn-primary" onclick="submitImport()">开始导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Material Modal -->
+    <div class="modal-overlay" id="addMaterialModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>添加新物料</h3>
+                <button class="btn btn-icon" onclick="closeModal('addMaterialModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addMaterialForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label">SAP号码 *</label>
+                            <input type="text" class="form-input" name="sap_code" id="addMatSapCode" required>
+                            <button type="button" class="btn" id="addMatSapPendingBtn"
+                                onclick="toggleSapPending('addMatSapCode', 'addMatSapPendingBtn')"
+                                style="margin-top:4px; padding:2px 8px; font-size:0.75rem; color:var(--color-warning); border:1px dashed var(--color-warning); background:rgba(245,158,11,0.08); border-radius:4px; cursor:pointer;">⏳
+                                暂无号码，申请中</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">中文名称 *</label>
+                            <input type="text" class="form-input" name="name_cn" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">越南语名称</label>
+                            <input type="text" class="form-input" name="name_vn">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">库位</label>
+                            <input type="text" class="form-input" name="location">
+                        </div>
+                        <input type="hidden" name="category" id="add_category">
+                        <div class="form-group">
+                            <label class="form-label">细分类别</label>
+                            <select class="form-select" name="subcategory" id="add_subcategory"
+                                onchange="onSubcategoryChange(this, 'add_category')">
+                                <option value="">请选择或输入</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">使用车间</label>
+                            <select class="form-select" name="workshop" id="add_workshop"
+                                onchange="updateEquipmentOptions(this, 'add_equipment')">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">使用设备</label>
+                            <select class="form-select" name="equipment" id="add_equipment">
+                                <option value="">请先选择车间</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">单位</label>
+                            <input type="text" class="form-input" name="unit" value="个">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最低库存</label>
+                            <input type="number" class="form-input" name="min_stock" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">购买链接</label>
+                        <input type="url" class="form-input" name="purchase_link">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">规格描述</label>
+                        <textarea class="form-textarea" name="specification" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addMaterialModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveMaterial()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Material Detail Modal -->
+    <div class="modal-overlay" id="materialDetailModal">
+        <div class="modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3 id="detailTitle">物料详情</h3>
+                <button class="btn btn-icon" onclick="closeModal('materialDetailModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="materialDetailContent">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Material Modal -->
+    <div class="modal-overlay" id="editMaterialModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>编辑物料</h3>
+                <button class="btn btn-icon" onclick="closeModal('editMaterialModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editMaterialForm">
+                    <input type="hidden" name="id" id="editMaterialId">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label">SAP号码</label>
+                            <input type="text" class="form-input" name="sap_code" id="edit_sap_code">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">中文名称 *</label>
+                            <input type="text" class="form-input" name="name_cn" id="edit_name_cn" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">越南语名称</label>
+                            <input type="text" class="form-input" name="name_vn" id="edit_name_vn">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">库位</label>
+                            <input type="text" class="form-input" name="location" id="edit_location">
+                        </div>
+                        <input type="hidden" name="category" id="edit_category">
+                        <div class="form-group">
+                            <label class="form-label">细分类别</label>
+                            <select class="form-select" name="subcategory" id="edit_subcategory"
+                                onchange="onSubcategoryChange(this, 'edit_category')">
+                                <option value="">请选择或输入</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">使用车间 (可多选)</label>
+                            <input type="hidden" name="workshop" id="edit_workshop">
+                            <div class="tag-input-container" id="tag_container_workshop"
+                                onclick="document.getElementById('tag_input_workshop').focus()">
+                                <input type="text" class="tag-input-field" id="tag_input_workshop"
+                                    placeholder="输入或选择..." list="workshop_opts">
+                            </div>
+                            <datalist id="workshop_opts">
+                                <option value="主线">
+                                <option value="正极">
+                                <option value="负极">
+                                <option value="配件">
+                                <option value="通用">
+                            </datalist>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">使用设备 (可多选)</label>
+                            <input type="hidden" name="equipment" id="edit_equipment">
+                            <div class="tag-input-container" id="tag_container_equipment"
+                                onclick="document.getElementById('tag_input_equipment').focus()">
+                                <input type="text" class="tag-input-field" id="tag_input_equipment"
+                                    placeholder="输入或选择..." list="equipment_opts">
+                            </div>
+                            <datalist id="equipment_opts">
+                                <!-- Populated dynamically -->
+                            </datalist>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">单位</label>
+                            <input type="text" class="form-input" name="unit" id="edit_unit">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最低库存</label>
+                            <input type="number" class="form-input" name="min_stock" id="edit_min_stock">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">购买链接</label>
+                        <input type="url" class="form-input" name="purchase_link" id="edit_purchase_link">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">说明记录</label>
+                        <div id="editNotesContainer"
+                            style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--spacing-md); min-height: 60px; max-height: 200px; overflow-y: auto;">
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">加载中...</p>
+                        </div>
+                        <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-sm);">
+                            <input type="text" id="editNewNoteInput" class="form-input" placeholder="输入新说明..."
+                                style="flex: 1; font-size: 0.85rem;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="saveNewNoteInEdit()"
+                                style="white-space: nowrap;">+ 添加</button>
+                        </div>
+                    </div>
+
+                    <!-- File Uploads -->
+                    <div
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-top: var(--spacing-lg);">
+                        <div>
+                            <label class="form-label">物料图片</label>
+                            <div class="file-upload-area" id="imageUploadArea"
+                                onclick="document.getElementById('editImageFile').click()">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" style="margin-bottom: 8px; color: var(--text-muted);">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                                <div style="color: var(--text-muted); font-size: 0.875rem;">点击上传图片</div>
+                            </div>
+                            <input type="file" id="editImageFile" accept="image/*" style="display: none;"
+                                onchange="previewImage(this)">
+                            <div id="imagePreview"></div>
+                        </div>
+                        <div>
+                            <label class="form-label">图纸PDF</label>
+                            <div class="file-upload-area" id="pdfUploadArea"
+                                onclick="document.getElementById('editPdfFile').click()">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" style="margin-bottom: 8px; color: var(--text-muted);">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10 9 9 9 8 9" />
+                                </svg>
+                                <div style="color: var(--text-muted); font-size: 0.875rem;">点击上传PDF</div>
+                            </div>
+                            <input type="file" id="editPdfFile" accept=".pdf" style="display: none;"
+                                onchange="previewPdf(this)">
+                            <div id="pdfPreview"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editMaterialModal')">取消</button>
+                <button class="btn btn-primary" onclick="updateMaterial()">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox for Image/PDF Preview -->
+    <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content" id="lightboxContent">
+            <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        let currentPage = 1;
+        const pageSize = 20;
+        let currentSort = { field: null, order: 'asc' };
+
+        const debouncedSearch = debounce(() => loadMaterials(), 300);
+
+        // Global config storage
+        window.allWorkshops = [];
+        window.groupedEquipment = {}; // Map<WorkshopName, Array<EquipmentOption>>
+        window.allSubcategoriesFlat = []; // Flat list of subcategory values
+        window.allLocations = []; // Flat list of location values
+
+        // Global storage for multi-select selections
+        window.selectedWorkshops = [];
+        window.selectedEquipments = [];
+        window.selectedSubcategories = [];
+        window.selectedLocations = [];
+
+        // Toggle multi-select dropdown visibility
+        function toggleMultiSelect(containerId) {
+            const container = document.getElementById(containerId);
+            const dropdown = container.querySelector('.multi-select-dropdown');
+            const isOpen = dropdown.classList.contains('show');
+
+            // Close all other dropdowns first
+            document.querySelectorAll('.multi-select-dropdown.show').forEach(d => {
+                d.classList.remove('show');
+            });
+
+            if (!isOpen) {
+                dropdown.classList.add('show');
+            }
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.multi-select-container')) {
+                document.querySelectorAll('.multi-select-dropdown.show').forEach(d => {
+                    d.classList.remove('show');
+                });
+            }
+        });
+
+        // Populate multi-select dropdown with checkbox items
+        function populateMultiSelect(dropdownId, values, labelId, type) {
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+
+            const selectedArray = getSelectedArrayByType(type);
+
+            let html = values.map(val => `
+                <label class="multi-select-item">
+                    <input type="checkbox" value="${val}" ${selectedArray.includes(val) ? 'checked' : ''} 
+                           onchange="handleMultiSelectChange('${type}', '${val}', this.checked, '${labelId}')">
+                    ${val}
+                </label>
+            `).join('');
+
+            if (values.length === 0) {
+                html = '<div class="multi-select-item" style="color: var(--text-muted);">暂无选项</div>';
+            }
+
+            dropdown.innerHTML = html;
+        }
+
+        // Get the correct selected array by type
+        function getSelectedArrayByType(type) {
+            switch (type) {
+                case 'workshop': return window.selectedWorkshops;
+                case 'equipment': return window.selectedEquipments;
+                case 'subcategory': return window.selectedSubcategories;
+                case 'location': return window.selectedLocations;
+                default: return [];
+            }
+        }
+
+        // Handle checkbox selection change
+        function handleMultiSelectChange(type, value, checked, labelId) {
+            const selectedArray = getSelectedArrayByType(type);
+
+            if (checked) {
+                if (!selectedArray.includes(value)) {
+                    selectedArray.push(value);
+                }
+            } else {
+                const index = selectedArray.indexOf(value);
+                if (index > -1) {
+                    selectedArray.splice(index, 1);
+                }
+            }
+
+            // Update label
+            updateMultiSelectLabel(labelId, selectedArray);
+
+            // Reload materials with new filter
+            loadMaterials();
+        }
+
+        // Update the button label text
+        function updateMultiSelectLabel(labelId, selectedArray) {
+            const label = document.getElementById(labelId);
+            if (!label) return;
+
+            if (selectedArray.length === 0) {
+                label.textContent = '全部';
+            } else if (selectedArray.length === 1) {
+                label.textContent = selectedArray[0];
+            } else {
+                label.textContent = `已选${selectedArray.length}项`;
+            }
+        }
+
+        // Load configuration options for dropdowns
+        async function loadConfigDropdowns() {
+            try {
+                // Load subcategory options
+                const subcategoryOptions = await api.get('/config/subcategory');
+                window.allSubcategories = subcategoryOptions;
+
+                const groupedSub = {};
+                subcategoryOptions.forEach(opt => {
+                    const parent = opt.parent_value || '其他';
+                    if (!groupedSub[parent]) groupedSub[parent] = [];
+                    groupedSub[parent].push(opt);
+                });
+
+                const buildSubOptions = () => {
+                    let html = '<option value="">请选择或输入</option>';
+                    for (const [parent, opts] of Object.entries(groupedSub)) {
+                        html += `<optgroup label="${parent}">`;
+                        opts.forEach(opt => {
+                            html += `<option value="${opt.value}" data-parent="${parent}">${opt.value}</option>`;
+                        });
+                        html += `</optgroup>`;
+                    }
+                    return html;
+                };
+
+                const subOptionsHtml = buildSubOptions();
+                ['add_subcategory', 'edit_subcategory'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        const current = el.value;
+                        el.innerHTML = subOptionsHtml;
+                        if (current) el.value = current;
+                    }
+                });
+
+                // Load Workshops & Equipment
+                const [workshops, equipment] = await Promise.all([
+                    api.get('/config/workshop'),
+                    api.get('/config/equipment')
+                ]);
+
+                window.allWorkshops = workshops;
+
+                // Group equipment by workshop (parent_value)
+                window.groupedEquipment = {};
+                equipment.forEach(eq => {
+                    const parent = eq.parent_value || 'Unknown'; // 'Unknown' for legacy equipment with no workshop?
+                    // Or maybe handle independent equipment?
+                    // User goal is hierarchy. We should support "no parent" too maybe?
+                    if (!window.groupedEquipment[parent]) window.groupedEquipment[parent] = [];
+                    window.groupedEquipment[parent].push(eq);
+                });
+
+                const workshopOptionsHtml = '<option value="">请选择车间</option>' +
+                    workshops.map(w => `<option value="${w.value}">${w.value}</option>`).join('');
+
+                // Populate Workshop Selects (modal only - filter bar uses multi-select)
+                const modalWorkshopHtml = '<option value="">请选择车间</option>' +
+                    workshops.map(w => `<option value="${w.value}">${w.value}</option>`).join('');
+
+                // Modal workshop selects
+                // Modal workshop selects (add_workshop is select, edit_workshop is hidden/tag-input)
+                ['add_workshop'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        const current = el.value;
+                        el.innerHTML = modalWorkshopHtml;
+                        if (current) el.value = current;
+                    }
+                });
+
+                // Populate Workshop Datalist (for Tag Input)
+                const workshopDatalist = document.getElementById('workshop_opts');
+                if (workshopDatalist) {
+                    workshopDatalist.innerHTML = workshops.map(w => `<option value="${w.value}">`).join('');
+                }
+
+                // Populate multi-select dropdowns for workshop and equipment
+                populateMultiSelect('workshopDropdown', workshops.map(w => w.value), 'workshopMultiLabel', 'workshop');
+
+                // For equipment, get all unique equipment values
+                const allEquipment = [];
+                Object.values(window.groupedEquipment).forEach(eqList => {
+                    eqList.forEach(eq => {
+                        if (!allEquipment.includes(eq.value)) {
+                            allEquipment.push(eq.value);
+                        }
+                    });
+                });
+                populateMultiSelect('equipmentDropdown', allEquipment, 'equipmentMultiLabel', 'equipment');
+
+                // Populate Equipment Datalist (for Tag Input)
+                const equipmentDatalist = document.getElementById('equipment_opts');
+                if (equipmentDatalist) {
+                    equipmentDatalist.innerHTML = allEquipment.map(e => `<option value="${e}">`).join('');
+                }
+
+                // Populate subcategory multi-select (use flat list from loaded subcategories)
+                window.allSubcategoriesFlat = subcategoryOptions.map(s => s.value);
+                populateMultiSelect('subcategoryDropdown', window.allSubcategoriesFlat, 'subcategoryMultiLabel', 'subcategory');
+
+                // Load locations from materials API and populate
+                loadLocationOptions();
+
+            } catch (e) {
+                console.error('Failed to load config dropdowns:', e);
+            }
+        }
+
+        // Load unique locations from materials for multi-select
+        async function loadLocationOptions() {
+            try {
+                // Get distinct locations from materials API
+                const data = await api.get('/materials?limit=2000');
+                const locations = [...new Set(data.items.map(m => m.location).filter(l => l && l.trim()))];
+                window.allLocations = locations.sort();
+                populateMultiSelect('locationDropdown', window.allLocations, 'locationMultiLabel', 'location');
+            } catch (e) {
+                console.error('Failed to load location options:', e);
+            }
+        }
+
+        // Update Equipment options based on selected Workshop
+        function updateEquipmentOptions(workshopSelect, equipmentSelectId, currentEquipmentValue = null) {
+            const workshopVal = workshopSelect.value;
+            const equipmentSelect = document.getElementById(equipmentSelectId);
+            if (!equipmentSelect) return;
+
+            if (!workshopVal) {
+                equipmentSelect.innerHTML = '<option value="">请先选择车间</option>';
+                return;
+            }
+
+            const equipments = window.groupedEquipment[workshopVal] || [];
+
+            let html = '<option value="">请选择设备</option>';
+            equipments.forEach(eq => {
+                html += `<option value="${eq.value}">${eq.value}</option>`;
+            });
+
+            equipmentSelect.innerHTML = html;
+
+            if (currentEquipmentValue) {
+                equipmentSelect.value = currentEquipmentValue;
+            }
+        }
+
+        // Update hidden category input based on selected subcategory
+        function onSubcategoryChange(selectEl, categoryInputId) {
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const parent = selectedOption ? selectedOption.getAttribute('data-parent') : '';
+            const categoryInput = document.getElementById(categoryInputId);
+            if (categoryInput) {
+                categoryInput.value = parent;
+            }
+        }
+
+        // Override openModal to load config dropdowns when opening material modals
+        const originalOpenModal = window.openModal;
+        window.openModal = function (modalId) {
+            originalOpenModal(modalId);
+            if (modalId === 'addMaterialModal' || modalId === 'editMaterialModal') {
+                loadConfigDropdowns();
+            }
+        };
+
+        // Sort table by column
+        function sortTable(field) {
+            if (currentSort.field === field) {
+                currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                currentSort.order = 'asc';
+            }
+
+            // Update sort icon classes
+            document.querySelectorAll('#materialsTable th.sortable').forEach(th => {
+                th.classList.remove('asc', 'desc');
+                if (th.getAttribute('onclick').includes(`'${field}'`)) {
+                    th.classList.add(currentSort.order);
+                }
+            });
+
+            // Use server-side sorting for whole dataset
+            loadMaterials(1);
+        }
+
+        // Config maintenance modal
+        async function openConfigModal() {
+            let modal = document.getElementById('configModal');
+            if (!modal) {
+                // Create modal if not exists
+                const modalHtml = `
+                <div class="modal-overlay" id="configModal">
+                    <div class="modal" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h3>配置维护</h3>
+                            <button class="btn btn-icon" onclick="closeModal('configModal')">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="tabs" style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                <button class="btn btn-sm active" onclick="loadConfigOptions('subcategory')" id="tabSubcategory">细分类别</button>
+                                <button class="btn btn-sm" onclick="loadConfigOptions('workshop_equipment')" id="tabWorkshopEquipment">车间设备</button>
+                            </div>
+                            
+                            <!-- Parent Selector -->
+                            <div class="form-group" id="configParentGroup" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 0.8em; margin-bottom: 4px;" id="configParentLabel">所属大类</label>
+                                <select class="form-select" id="configParentCategory" onchange="refreshConfigList()">
+                                    <option value="">请选择...</option>
+                                </select>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                <input type="text" id="newOptionValue" class="form-input" placeholder="输入新选项..." style="flex: 1;">
+                                <button class="btn btn-primary" onclick="addConfigOption()">添加</button>
+                            </div>
+                            <div id="configOptionsList" style="max-height: 300px; overflow-y: auto;"></div>
+                            
+                            <div style="margin-top: 16px; display: flex; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                                <span style="font-size: 0.8em; color: var(--text-muted); align-self: center; flex:1;">
+                                    💡 提示: 在"车间设备"中，不选择车间直接添加即为添加新车间；选择车间后添加则为该车间下的设备。
+                                </span>
+                                <button class="btn btn-secondary btn-sm" onclick="syncConfigFromMaterials()">同补数据</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                modal = document.getElementById('configModal');
+            }
+            modal.classList.add('active');
+            loadConfigOptions('subcategory');
+        }
+
+        let currentConfigType = 'subcategory'; // 'subcategory' or 'workshop_equipment'
+
+        async function loadConfigOptions(type) {
+            currentConfigType = type;
+            // Update tabs
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+            if (type === 'subcategory') document.getElementById('tabSubcategory').classList.add('active');
+            if (type === 'workshop_equipment') document.getElementById('tabWorkshopEquipment').classList.add('active');
+
+            const parentSelect = document.getElementById('configParentCategory');
+            const parentLabel = document.getElementById('configParentLabel');
+
+            parentSelect.innerHTML = '<option value="">-- 请选择或不选(添加父级) --</option>';
+
+            if (type === 'subcategory') {
+                parentLabel.textContent = "所属种类 (父级)";
+                ['电气', '机械', '模具', '耗材'].forEach(c => {
+                    parentSelect.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`);
+                });
+                parentSelect.value = '电气'; // Default
+            } else if (type === 'workshop_equipment') {
+                parentLabel.textContent = "所属车间 (父级)";
+                // Load workshops as parents
+                try {
+                    const workshops = await api.get('/config/workshop');
+                    workshops.forEach(w => {
+                        parentSelect.insertAdjacentHTML('beforeend', `<option value="${w.value}">${w.value}</option>`);
+                    });
+                } catch (e) { console.error(e); }
+                parentSelect.value = ''; // Default to root
+            }
+
+            refreshConfigList();
+        }
+
+        async function refreshConfigList() {
+            const listEl = document.getElementById('configOptionsList');
+            const parentVal = document.getElementById('configParentCategory').value;
+
+            listEl.innerHTML = '<div class="loading-spinner" style="margin: 2rem auto;"></div>';
+
+            try {
+                let items = [];
+                let typeToFetch = '';
+
+                if (currentConfigType === 'subcategory') {
+                    typeToFetch = 'subcategory';
+                    items = await api.get(`/config/${typeToFetch}?parent_value=${encodeURIComponent(parentVal || '')}`);
+                } else {
+                    // Workshop & Equipment logic
+                    if (!parentVal) {
+                        // Show Workshops
+                        typeToFetch = 'workshop';
+                        items = await api.get('/config/workshop');
+                    } else {
+                        // Show Equipment for selected Workshop
+                        typeToFetch = 'equipment';
+                        items = await api.get(`/config/equipment?parent_value=${encodeURIComponent(parentVal)}`);
+                    }
+                }
+
+                if (!items || items.length === 0) {
+                    listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">暂无配置项</div>';
+                    return;
+                }
+
+                listEl.innerHTML = items.map(opt => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 8px;">
+                        <div>
+                            <span style="font-weight: 500;">${opt.value}</span>
+                            ${opt.parent_value ? `<span style="font-size: 0.8em; color: var(--text-muted); margin-left: 8px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">${opt.parent_value}</span>` : ''}
+                        </div>
+                        <button onclick="deleteConfigOption(${opt.id}, '${typeToFetch}')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error(error);
+                listEl.innerHTML = '<div style="color:red; padding:10px;">加载失败</div>';
+            }
+        }
+
+        async function addConfigOption() {
+            const val = document.getElementById('newOptionValue').value.trim();
+            const parentVal = document.getElementById('configParentCategory').value;
+
+            if (!val) {
+                showToast('请输入内容', 'warning');
+                return;
+            }
+
+            let typeToAdd = '';
+            if (currentConfigType === 'subcategory') {
+                typeToAdd = 'subcategory';
+                if (!parentVal) { showToast('细分类别必须选择所属种类', 'warning'); return; }
+            } else {
+                // Workshop Equipment
+                if (!parentVal) typeToAdd = 'workshop'; // Adding a new Workshop
+                else typeToAdd = 'equipment'; // Adding Equipment to Workshop
+            }
+
+            try {
+                await api.post(`/config/${typeToAdd}`, {
+                    option_value: val,
+                    parent_value: parentVal || null,
+                    display_order: 0
+                });
+
+                document.getElementById('newOptionValue').value = '';
+                showToast('添加成功');
+
+                // If we added a workshop, we need to refresh the parent dropdown too
+                if (typeToAdd === 'workshop') {
+                    loadConfigOptions('workshop_equipment');
+                } else {
+                    refreshConfigList();
+                }
+
+                // Refresh global dropdowns
+                loadConfigDropdowns();
+            } catch (error) {
+                showToast(error.message || '添加失败', 'error');
+            }
+        }
+
+        async function deleteConfigOption(id, type) {
+            if (!confirm('确定要删除此选项吗？')) return;
+            try {
+                await api.delete(`/config/${id}`); // Assuming delete endpoint is generic by ID or we need type? 
+                // Wait, delete endpoint in configurations.py is /config/{option_id} (generic by ID)
+                // So type param is just for us to know what to refresh.
+
+                showToast('已删除');
+                if (type === 'workshop') {
+                    loadConfigOptions('workshop_equipment'); // Refresh parents
+                } else {
+                    refreshConfigList();
+                }
+                loadConfigDropdowns();
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        async function syncConfigFromMaterials() {
+            try {
+                const result = await api.post('/config/sync-from-materials', {});
+                showToast(`同步完成: 添加 ${result.added.subcategory + result.added.equipment + result.added.workshop + (result.added.category || 0)} 项`);
+                loadConfigOptions(currentConfigType);
+            } catch (e) {
+                showToast('同步失败: ' + e.message, 'error');
+            }
+        }
+
+        async function syncConfigFromOrders() {
+            try {
+                const result = await api.post('/config/sync-from-orders', {});
+                showToast(`同步完成: 添加 ${result.workshops_added + result.equipment_added} 项`);
+                loadConfigOptions(currentConfigType);
+            } catch (e) {
+                showToast('同步失败: ' + e.message, 'error');
+            }
+        }
+
+
+        async function loadMaterials(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('searchInput').value;
+            const category = '';
+
+            const tbody = document.getElementById('materialsBody');
+            // Show loading inside tbody instead of destroying table structure
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                        加载中...
+                    </td>
+                </tr>
+            `;
+
+            try {
+                // Note: api.get already adds /api prefix
+                let url = `/materials?skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (category) url += `&category=${encodeURIComponent(category)}`;
+
+
+
+
+                // Add column filters (text inputs)
+                const filterSap = document.getElementById('filterSap').value.trim();
+                const filterNameCn = document.getElementById('filterNameCn').value.trim();
+
+                if (filterSap) url += `&sap_code=${encodeURIComponent(filterSap)}`;
+                if (filterNameCn) url += `&name_cn=${encodeURIComponent(filterNameCn)}`;
+
+                // Multi-select filters (send as comma-separated values)
+                if (window.selectedSubcategories && window.selectedSubcategories.length > 0) {
+                    url += `&subcategories=${encodeURIComponent(window.selectedSubcategories.join(','))}`;
+                }
+                if (window.selectedLocations && window.selectedLocations.length > 0) {
+                    url += `&locations=${encodeURIComponent(window.selectedLocations.join(','))}`;
+                }
+                if (window.selectedWorkshops && window.selectedWorkshops.length > 0) {
+                    url += `&workshops=${encodeURIComponent(window.selectedWorkshops.join(','))}`;
+                }
+                if (window.selectedEquipments && window.selectedEquipments.length > 0) {
+                    url += `&equipments=${encodeURIComponent(window.selectedEquipments.join(','))}`;
+                }
+
+                if (currentSort.field) {
+                    url += `&sort_by=${currentSort.field}&sort_order=${currentSort.order}`;
+                }
+
+                console.log('Fetching materials:', url);
+                const data = await api.get(url);
+                console.log('Materials data:', data);
+
+                document.getElementById('totalCount').textContent = `${data.total} 条物料`;
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                暂无物料数据
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    // Store all materials data for client-side filtering
+                    window.allMaterialsData = data.items;
+                    renderMaterialsTable(data.items);
+                }
+
+                renderPagination(data.total, currentPage, pageSize, document.getElementById('pagination'), 'loadMaterials');
+
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // Render materials table with selectable cells
+        function renderMaterialsTable(materials) {
+            const tbody = document.getElementById('materialsBody');
+            if (materials.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                            没有匹配的物料
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            // Check URL param first for consistency
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentLang = urlParams.get('lang') || localStorage.getItem('lang') || 'cn';
+
+            tbody.innerHTML = materials.map(m => {
+                // Determine name based on language
+                const displayName = currentLang === 'vn' && m.name_vn ? m.name_vn : m.name_cn;
+
+                return `
+                <tr>
+                    <td><input type="checkbox" class="material-checkbox" value="${m.id}" onchange="updateMaterialSelection()"></td>
+                    <td>
+                        <div class="material-thumb">
+                            ${m.image
+                        ? `<img src="${m.image}" class="thumb-item" alt="${displayName}" onclick="openLightbox('${m.image}', 'image')" title="点击查看大图">`
+                        : '<div class="thumb-item" style="display: flex; align-items: center; justify-content: center; background: var(--bg-tertiary); color: var(--text-muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'
+                    }
+                            ${m.drawing_pdf
+                        ? `<div class="pdf-mini" onclick="openLightbox('${m.drawing_pdf}', 'pdf')" title="点击查看PDF图纸"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`
+                        : ''
+                    }
+                        </div>
+                    </td>
+                    <td class="selectable">
+                        <strong>${m.sap_code}</strong>
+                    </td>
+                    <td class="selectable">
+                        ${displayName}
+                        ${currentLang === 'cn' && m.name_vn ? `<div style="font-size:0.75em;color:var(--text-muted)">${m.name_vn}</div>` : ''}
+                        ${currentLang === 'vn' ? `<div style="font-size:0.75em;color:var(--text-muted)">${m.name_cn}</div>` : ''}
+                    </td>
+
+                    <td class="selectable">${m.subcategory || '-'}</td>
+                    <td class="selectable">${m.location || '-'}</td>
+                    <td class="selectable">${m.workshop || '-'}</td>
+                    <td class="selectable">${m.equipment || '-'}</td>
+                    <td>
+                        <button class="btn btn-icon" onclick="viewMaterial(${m.id})" title="查看详情">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-icon" onclick="editMaterial(${m.id})" title="编辑">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-icon" onclick="deleteMaterial(${m.id}, '${m.name_cn}')" title="删除" style="color: var(--color-danger);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+        }
+
+        // === Batch Delete for Materials ===
+        function toggleSelectAllMaterials(checkbox) {
+            document.querySelectorAll('.material-checkbox').forEach(cb => cb.checked = checkbox.checked);
+            updateMaterialSelection();
+        }
+
+        function updateMaterialSelection() {
+            const checked = document.querySelectorAll('.material-checkbox:checked');
+            const bar = document.getElementById('batchDeleteBar');
+            if (checked.length > 0) {
+                bar.style.display = 'flex';
+                document.getElementById('batchDeleteCount').textContent = `已选择 ${checked.length} 项`;
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function clearMaterialSelection() {
+            document.querySelectorAll('.material-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAllMaterials').checked = false;
+            document.getElementById('batchDeleteBar').style.display = 'none';
+        }
+
+        async function batchDeleteMaterials() {
+            const checked = document.querySelectorAll('.material-checkbox:checked');
+            const ids = Array.from(checked).map(cb => parseInt(cb.value));
+            if (ids.length === 0) return;
+            if (!confirm(`确定要删除选中的 ${ids.length} 个物料吗？`)) return;
+            try {
+                const result = await api.post('/materials/batch-delete', ids);
+                showToast(result.message);
+                clearMaterialSelection();
+                loadMaterials(currentPage);
+            } catch (error) {
+                showToast('批量删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // Apply column filters (client-side)
+        function applyColumnFilters() {
+            if (!window.allMaterialsData) return;
+
+            const filterSap = document.getElementById('filterSap').value.toLowerCase();
+            const filterNameCn = document.getElementById('filterNameCn').value.toLowerCase();
+
+            const filterSubcategory = document.getElementById('filterSubcategory')?.value.toLowerCase() || '';
+            const filterLocation = document.getElementById('filterLocation').value.toLowerCase();
+            const filterWorkshopCol = document.getElementById('filterWorkshopCol').value;
+            const filterEquipment = document.getElementById('filterEquipment')?.value.toLowerCase() || '';
+
+            let filtered = window.allMaterialsData.filter(m => {
+                if (filterSap && !(m.sap_code || '').toLowerCase().includes(filterSap)) return false;
+                if (filterNameCn && !(m.name_cn || '').toLowerCase().includes(filterNameCn)) return false;
+
+                if (filterSubcategory && !(m.subcategory || '').toLowerCase().includes(filterSubcategory)) return false;
+                if (filterLocation && !(m.location || '').toLowerCase().includes(filterLocation)) return false;
+                if (filterWorkshopCol && m.workshop !== filterWorkshopCol) return false;
+                if (filterEquipment && !(m.equipment || '').toLowerCase().includes(filterEquipment)) return false;
+                return true;
+            });
+
+            // Apply sorting if set
+            if (currentSort.field) {
+                filtered.sort((a, b) => {
+                    const va = (a[currentSort.field] || '').toString().toLowerCase();
+                    const vb = (b[currentSort.field] || '').toString().toLowerCase();
+                    const cmp = va.localeCompare(vb, 'zh-CN');
+                    return currentSort.order === 'asc' ? cmp : -cmp;
+                });
+            }
+
+            renderMaterialsTable(filtered);
+        }
+
+        // Clear all column filters
+        function clearColumnFilters() {
+            document.getElementById('filterSap').value = '';
+            document.getElementById('filterNameCn').value = '';
+
+            if (document.getElementById('filterSubcategory')) document.getElementById('filterSubcategory').value = '';
+            document.getElementById('filterLocation').value = '';
+            document.getElementById('filterWorkshopCol').value = '';
+            if (document.getElementById('filterEquipment')) document.getElementById('filterEquipment').value = '';
+            currentSort = { field: null, order: 'asc' };
+
+            loadMaterials();
+        }
+
+
+        async function saveMaterial() {
+            const form = document.getElementById('addMaterialForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Convert types
+            data.min_stock = parseInt(data.min_stock) || 0;
+
+            try {
+                const result = await api.post('/materials', data);
+                // Save specification as a note if provided
+                const specValue = data.specification;
+                if (specValue && result.id) {
+                    try { await api.post(`/materials/${result.id}/notes`, { content: specValue }); } catch (e) { console.warn('Note save failed:', e); }
+                }
+                showToast('物料添加成功');
+                closeModal('addMaterialModal');
+                form.reset();
+                loadMaterials();
+            } catch (error) {
+                showToast('添加失败: ' + error.message, 'error');
+            }
+        }
+
+        // --- SAP Code Pending Toggle ---
+        function toggleSapPending(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (!input || !btn) return;
+
+            if (input.dataset.pending === 'true') {
+                // Turn OFF pending mode
+                input.dataset.pending = 'false';
+                input.value = '';
+                input.readOnly = false;
+                input.style.opacity = '1';
+                btn.innerHTML = '⏳ 暂无号码，申请中';
+                btn.style.color = 'var(--color-warning)';
+                btn.style.borderColor = 'var(--color-warning)';
+                btn.style.background = 'rgba(245,158,11,0.08)';
+                // Re-fetch the next SAP code
+                api.get('/materials/next-sap-code').then(result => {
+                    if (!input.value) input.value = result.next_sap_code;
+                }).catch(() => { });
+            } else {
+                // Turn ON pending mode
+                input.dataset.pending = 'true';
+                input.value = 'PENDING-' + Date.now();
+                input.readOnly = true;
+                input.style.opacity = '0.5';
+                btn.innerHTML = '✅ 已标记申请中 (点击撤销)';
+                btn.style.color = 'var(--color-success)';
+                btn.style.borderColor = 'var(--color-success)';
+                btn.style.background = 'rgba(34,197,94,0.08)';
+            }
+        }
+
+        // Auto-fill SAP code when opening add material modal
+        async function openAddMaterialModal() {
+            openModal('addMaterialModal');
+            // Reset pending state
+            const sapInput = document.getElementById('addMatSapCode');
+            const pendingBtn = document.getElementById('addMatSapPendingBtn');
+            if (sapInput) {
+                sapInput.dataset.pending = 'false';
+                sapInput.readOnly = false;
+                sapInput.style.opacity = '1';
+            }
+            if (pendingBtn) {
+                pendingBtn.innerHTML = '⏳ 暂无号码，申请中';
+                pendingBtn.style.color = 'var(--color-warning)';
+                pendingBtn.style.borderColor = 'var(--color-warning)';
+                pendingBtn.style.background = 'rgba(245,158,11,0.08)';
+            }
+            try {
+                const result = await api.get('/materials/next-sap-code');
+                const sapInput = document.querySelector('#addMaterialForm input[name="sap_code"]');
+                if (sapInput && !sapInput.value) {
+                    sapInput.value = result.next_sap_code;
+                }
+            } catch (e) {
+                console.warn('Failed to fetch next SAP code:', e);
+            }
+        }
+
+        async function submitImport() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('请选择文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const statusDiv = document.getElementById('importStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="display: flex; align-items: center; gap: 10px;"><div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div> 正在解析并导入数据，请稍候...</div>';
+
+            try {
+                const result = await api.upload('/materials/import', formData);
+
+                let msg = `<div style="color: var(--color-success); font-weight: bold; margin-bottom: 5px;">✅ 导入完成</div>`;
+                msg += `<div>新增: <strong>${result.added}</strong> 条 | 更新: <strong>${result.updated}</strong> 条</div>`;
+
+                if (result.errors && result.errors.length > 0) {
+                    msg += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                        <div style="color: var(--color-warning); margin-bottom: 5px;">⚠️ 发现 ${result.errors.length} 个问题:</div>
+                        <div style="max-height: 100px; overflow-y: auto; font-size: 0.8rem; color: var(--text-muted);">
+                            ${result.errors.join('<br>')}
+                        </div>
+                    </div>`;
+                    showToast('导入完成，部分数据有误', 'warning');
+                } else {
+                    showToast('导入成功');
+                    setTimeout(() => {
+                        closeModal('importModal');
+                        statusDiv.style.display = 'none';
+                        fileInput.value = '';
+                    }, 2000);
+                }
+
+                statusDiv.innerHTML = msg;
+                loadMaterials(); // Refresh list immediately
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: var(--color-danger);">❌ 导入失败: ${error.message}</div>`;
+                showToast('导入失败', 'error');
+            }
+        }
+
+        async function viewMaterial(id) {
+            try {
+                const material = await api.get(`/materials/${id}`);
+
+                document.getElementById('detailTitle').textContent = material.name_cn;
+
+                document.getElementById('materialDetailContent').innerHTML = `
+                    <div class="material-detail">
+                        <div>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted); width: 100px; white-space: nowrap;">SAP号码</td>
+                                        <td style="padding: 0.6rem 0; font-weight: 600;">${material.sap_code}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">中文名称</td>
+                                        <td style="padding: 0.6rem 0;">${material.name_cn}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">越南语名称</td>
+                                        <td style="padding: 0.6rem 0;">${material.name_vn || '-'}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">种类</td>
+                                        <td style="padding: 0.6rem 0;">${material.category || '-'}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">细分</td>
+                                        <td style="padding: 0.6rem 0;">${material.subcategory || '-'}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">车间</td>
+                                        <td style="padding: 0.6rem 0;">${material.workshop || '-'}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">设备</td>
+                                        <td style="padding: 0.6rem 0;">${material.equipment || '-'}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">库位</td>
+                                        <td style="padding: 0.6rem 0;">${material.location || '-'}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">最低库存</td>
+                                        <td style="padding: 0.6rem 0;">${material.min_stock}</td>
+                                    </tr>
+                                    ${material.purchase_link ? `
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted);">购买链接</td>
+                                        <td style="padding: 0.6rem 0;"><a href="${material.purchase_link.startsWith('http') ? material.purchase_link : 'https://' + material.purchase_link}" target="_blank" style="word-break: break-all;">${material.purchase_link}</a></td>
+                                    </tr>` : ''}
+                                    ${material.specification ? `
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 0.6rem 0; color: var(--text-muted); vertical-align: top;">规格描述</td>
+                                        <td style="padding: 0.6rem 0; white-space: pre-wrap;">${material.specification}</td>
+                                    </tr>` : ''}
+                                </tbody>
+                            </table>
+
+                            <!-- Material Notes Section -->
+                            <div style="margin-top: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <h4 style="margin: 0;">说明记录</h4>
+                                    <button class="btn btn-secondary btn-sm" onclick="addNoteInline(${material.id})" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">＋ 添加</button>
+                                </div>
+                                <div id="materialNotesList${material.id}" style="font-size: 0.875rem;"></div>
+                            </div>
+                            
+                            ${material.drawing_pdf ? `
+                                <h4 style="margin-top: 1rem;">图纸预览</h4>
+                                <iframe src="${material.drawing_pdf}" class="pdf-viewer"></iframe>
+                            ` : ''}
+                        </div>
+                        
+                        <div>
+                            ${material.image ? `<img src="${material.image}" style="width: 100%; border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">` : ''}
+                            
+                            <div class="card" style="margin-bottom: var(--spacing-lg);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                                    <h4 style="margin: 0;">价格历史</h4>
+                                    <button class="btn btn-secondary btn-sm" onclick="openPriceHistory(${material.id})" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                        </svg>
+                                        查看走势
+                                    </button>
+                                </div>
+                                <div class="price-history">
+                                    ${material.prices && material.prices.length > 0
+                        ? material.prices.slice(0, 5).map(p => `
+                                            <div style="padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+                                                <span>${formatCurrency(p.price, p.currency)}</span>
+                                                <span style="color: var(--text-muted);">${formatDate(p.effective_date)}</span>
+                                            </div>
+                                        `).join('') + (material.prices.length > 5 ? `<div style="color: var(--text-muted); text-align: center; padding-top: var(--spacing-sm);">还有 ${material.prices.length - 5} 条记录...</div>` : '')
+                        : '<p style="color: var(--text-muted);">暂无价格记录</p>'
+                    }
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <h4>报价单</h4>
+                                <div class="quotation-list">
+                                    ${material.quotations && material.quotations.length > 0
+                        ? material.quotations.map(q => `
+                                            <div class="quotation-item">
+                                                <div>
+                                                    <strong>${q.supplier_name || '供应商'}</strong>
+                                                    <div style="color: var(--text-muted); font-size: 0.875rem;">${formatCurrency(q.price, q.currency)}</div>
+                                                </div>
+                                                ${q.file_path ? `<a href="${q.file_path}" target="_blank" class="btn btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>` : ''}
+                                            </div>
+                                        `).join('')
+                        : '<p style="color: var(--text-muted);">暂无报价单</p>'
+                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+
+                openModal('materialDetailModal');
+                // Load notes for this material
+                loadNotesForDetail(material.id);
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // Price history modal with SVG chart
+        async function openPriceHistory(materialId) {
+            try {
+                const data = await api.get(`/materials/${materialId}/price-history`);
+
+                let html = `
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <h3 style="margin-bottom: var(--spacing-sm);">${data.material.name_cn}</h3>
+                        <span class="badge badge-neutral">${data.material.sap_code}</span>
+                    </div>
+                `;
+
+                if (data.suppliers.length === 0) {
+                    html += '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">暂无价格数据</p>';
+                } else {
+                    // Supplier filter
+                    html += `
+                        <div style="margin-bottom: var(--spacing-lg);">
+                            <label class="form-label" style="margin-bottom: var(--spacing-sm);">供应商筛选</label>
+                            <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                                <button class="btn btn-sm supplier-filter-btn active" onclick="filterPriceChart('all', this)" data-filter="all" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">全部合并</button>
+                                ${data.suppliers.map(s => `
+                                    <button class="btn btn-sm supplier-filter-btn" onclick="filterPriceChart(${s.supplier_id || 0}, this)" data-filter="${s.supplier_id || 0}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">${s.supplier_name}</button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+
+                    // Store data for chart
+                    window.priceHistoryData = data.suppliers;
+
+                    // SVG Chart container
+                    html += `
+                        <div id="priceChartContainer" style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                            <svg id="priceChart" viewBox="0 0 400 200" style="width: 100%; height: 200px;"></svg>
+                        </div>
+                    `;
+
+                    // Price list
+                    html += `<div id="priceListContainer" style="max-height: 250px; overflow-y: auto;">`;
+                    for (const supplier of data.suppliers) {
+                        html += `
+                            <div style="margin-bottom: var(--spacing-md);">
+                                <h5 style="color: var(--accent-primary); margin-bottom: var(--spacing-sm);">${supplier.supplier_name}</h5>
+                                ${supplier.prices.map(p => `
+                                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.875rem;">
+                                        <span><strong>${formatCurrency(p.price)}</strong></span>
+                                        <span style="color: var(--text-muted);">${p.date ? formatDate(p.date) : '-'} · ${p.source}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                    html += `</div>`;
+                }
+
+                // Show in lightbox
+                document.getElementById('lightboxContent').innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <div style="background: var(--bg-card); padding: var(--spacing-xl); border-radius: var(--radius-lg); width: 600px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
+                        ${html}
+                    </div>
+                `;
+                document.getElementById('lightbox').classList.add('active');
+                document.body.style.overflow = 'hidden';
+
+                // Draw initial chart with all data
+                if (data.suppliers.length > 0) {
+                    setTimeout(() => drawPriceChart('all'), 100);
+                }
+
+            } catch (error) {
+                showToast('加载价格历史失败: ' + error.message, 'error');
+            }
+        }
+
+        function filterPriceChart(filter, btn) {
+            document.querySelectorAll('.supplier-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            drawPriceChart(filter);
+        }
+
+        function drawPriceChart(filter) {
+            const svg = document.getElementById('priceChart');
+            if (!svg || !window.priceHistoryData) return;
+
+            let allPoints = [];
+            const colors = ['#0ea5e9', '#22c55e', '#f59e0b', '#ec4899', '#8b5cf6'];
+
+            // Collect points
+            if (filter === 'all') {
+                window.priceHistoryData.forEach((supplier, idx) => {
+                    supplier.prices.forEach(p => {
+                        allPoints.push({ price: p.price, date: new Date(p.date), color: colors[idx % colors.length] });
+                    });
+                });
+            } else {
+                const supplier = window.priceHistoryData.find(s => (s.supplier_id || 0) == filter);
+                if (supplier) {
+                    supplier.prices.forEach(p => {
+                        allPoints.push({ price: p.price, date: new Date(p.date), color: colors[0] });
+                    });
+                }
+            }
+
+            if (allPoints.length === 0) {
+                svg.innerHTML = '<text x="200" y="100" text-anchor="middle" fill="var(--text-muted)">无数据</text>';
+                return;
+            }
+
+            // Sort by date
+            allPoints.sort((a, b) => a.date - b.date);
+
+            // Calculate bounds
+            const minPrice = Math.min(...allPoints.map(p => p.price));
+            const maxPrice = Math.max(...allPoints.map(p => p.price));
+            const priceRange = maxPrice - minPrice || 1;
+
+            const padding = { top: 20, bottom: 30, left: 60, right: 20 };
+            const width = 400 - padding.left - padding.right;
+            const height = 200 - padding.top - padding.bottom;
+
+            // Draw SVG
+            let svgContent = `
+                <g transform="translate(${padding.left}, ${padding.top})">
+                    <!-- Y axis -->
+                    <line x1="0" y1="0" x2="0" y2="${height}" stroke="var(--border-color)" stroke-width="1"/>
+                    <!-- X axis -->
+                    <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="var(--border-color)" stroke-width="1"/>
+                    <!-- Y labels -->
+                    <text x="-5" y="10" text-anchor="end" fill="var(--text-muted)" font-size="10">${formatNumber(maxPrice)}</text>
+                    <text x="-5" y="${height}" text-anchor="end" fill="var(--text-muted)" font-size="10">${formatNumber(minPrice)}</text>
+            `;
+
+            // Draw points and lines
+            if (allPoints.length === 1) {
+                const x = width / 2;
+                const y = height / 2;
+                svgContent += `<circle cx="${x}" cy="${y}" r="4" fill="${allPoints[0].color}"/>`;
+            } else {
+                const step = width / (allPoints.length - 1);
+
+                // Line path
+                let path = '';
+                allPoints.forEach((p, i) => {
+                    const x = i * step;
+                    const y = height - ((p.price - minPrice) / priceRange) * height;
+                    if (i === 0) path += `M${x},${y}`;
+                    else path += ` L${x},${y}`;
+                });
+                svgContent += `<path d="${path}" fill="none" stroke="${allPoints[0].color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+                // Points
+                allPoints.forEach((p, i) => {
+                    const x = i * step;
+                    const y = height - ((p.price - minPrice) / priceRange) * height;
+                    svgContent += `<circle cx="${x}" cy="${y}" r="3" fill="${p.color}"/>`;
+                });
+            }
+
+            svgContent += '</g>';
+            svg.innerHTML = svgContent;
+        }
+
+        function formatNumber(n) {
+            const num = Number(n);
+            if (isNaN(num)) return '0';
+            const parts = String(num).split('.');
+            const decimals = parts.length > 1 ? parts[1].length : 0;
+            return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+        }
+
+        let currentEditingMaterialId = null;
+
+        async function editMaterial(id) {
+            try {
+                const material = await api.get(`/materials/${id}`);
+                currentEditingMaterialId = id;
+
+                // Fill form fields
+                document.getElementById('editMaterialId').value = id;
+                document.getElementById('edit_sap_code').value = material.sap_code || '';
+                document.getElementById('edit_name_cn').value = material.name_cn || '';
+                document.getElementById('edit_name_vn').value = material.name_vn || '';
+                document.getElementById('edit_location').value = material.location || '';
+                document.getElementById('edit_category').value = material.category || '';
+                document.getElementById('edit_subcategory').value = material.subcategory || '';
+
+                // Set Workshop (Legacy code removed - TagStateManager handles this)
+                // const wsSelect = document.getElementById('edit_workshop');
+                // if (wsSelect) {
+                //    wsSelect.value = material.workshop || '';
+                //    updateEquipmentOptions(wsSelect, 'edit_equipment', material.equipment);
+                // }
+
+                // document.getElementById('edit_workshop').value = material.workshop || '';
+                // document.getElementById('edit_equipment').value = material.equipment || '';
+
+                // Initialize Tag Inputs
+                TagStateManager.init('edit_workshop', material.workshop || '');
+                TagStateManager.init('edit_equipment', material.equipment || '');
+
+                document.getElementById('edit_unit').value = material.unit || '个';
+                document.getElementById('edit_min_stock').value = material.min_stock || 0;
+                document.getElementById('edit_purchase_link').value = material.purchase_link || '';
+
+                // Load notes in edit modal
+                loadNotesForEdit(id);
+
+                // Show existing image preview
+                const imagePreview = document.getElementById('imagePreview');
+                if (material.image) {
+                    imagePreview.innerHTML = `
+                    <div class="file-preview">
+                        <img src="${material.image}" alt="当前图片" onclick="openLightbox('${material.image}', 'image')">
+                        <div>
+                            <div style="font-weight: 500;">当前图片</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">点击图片预览</div>
+                        </div>
+                        <button type="button" class="delete-btn" onclick="deleteImage(${material.id})">删除</button>
+                    </div>
+                `;
+                    document.getElementById('imageUploadArea').classList.add('has-file');
+                } else {
+                    imagePreview.innerHTML = '';
+                    document.getElementById('imageUploadArea').classList.remove('has-file');
+                }
+
+                // Show existing PDF preview
+                const pdfPreview = document.getElementById('pdfPreview');
+                if (material.drawing_pdf) {
+                    pdfPreview.innerHTML = `
+                    <div class="file-preview">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--color-danger); cursor: pointer;" onclick="openLightbox('${material.drawing_pdf}', 'pdf')">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <div>
+                            <div style="font-weight: 500;">当前图纸</div>
+                            <a href="#" onclick="openLightbox('${material.drawing_pdf}', 'pdf'); return false;" style="font-size: 0.75rem;">点击预览PDF</a>
+                        </div>
+                        <button type="button" class="delete-btn" onclick="deletePdf(${material.id})">删除</button>
+                    </div>
+                    `;
+                    document.getElementById('pdfUploadArea').classList.add('has-file');
+                } else {
+                    pdfPreview.innerHTML = '';
+                    document.getElementById('pdfUploadArea').classList.remove('has-file');
+                }
+
+                // Reset file inputs
+                document.getElementById('editImageFile').value = '';
+                document.getElementById('editPdfFile').value = '';
+
+                openModal('editMaterialModal');
+            } catch (error) {
+                showToast('加载物料信息失败: ' + error.message, 'error');
+            }
+        }
+
+        function previewImage(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('imagePreview').innerHTML = `
+                        <div class="file-preview">
+                            <img src="${e.target.result}" alt="新图片预览" style="max-height: 120px; width: auto; object-fit: contain; border-radius: var(--radius-sm);">
+                            <div>
+                                <div style="font-weight: 500;">${file.name}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${(file.size / 1024).toFixed(1)} KB</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('imageUploadArea').classList.add('has-file');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewPdf(input) {
+            const file = input.files[0];
+            if (file) {
+                document.getElementById('pdfPreview').innerHTML = `
+                    < div class="file-preview" >
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--color-danger);">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <div>
+                            <div style="font-weight: 500;">${file.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                    </div >
+                    `;
+                document.getElementById('pdfUploadArea').classList.add('has-file');
+            }
+        }
+
+        async function updateMaterial() {
+            const id = currentEditingMaterialId;
+            if (!id) return;
+
+            const form = document.getElementById('editMaterialForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Remove readonly fields
+            delete data.id;
+            // Notes are managed separately now, don't send specification
+            delete data.specification;
+
+
+            // Convert types
+            data.min_stock = parseInt(data.min_stock) || 0;
+
+            try {
+                // Update basic info
+                await api.put(`/materials/${id}`, data);
+
+                // Upload new image if selected
+                const imageFile = document.getElementById('editImageFile').files[0];
+                if (imageFile) {
+                    const imageFormData = new FormData();
+                    imageFormData.append('file', imageFile);
+                    await api.upload(`/materials/${id}/image`, imageFormData);
+                }
+
+                // Upload new PDF if selected
+                const pdfFile = document.getElementById('editPdfFile').files[0];
+                if (pdfFile) {
+                    const pdfFormData = new FormData();
+                    pdfFormData.append('file', pdfFile);
+                    await api.upload(`/materials/${id}/drawing`, pdfFormData);
+                }
+
+                showToast('物料更新成功');
+                closeModal('editMaterialModal');
+                loadMaterials();
+            } catch (error) {
+                showToast('更新失败: ' + error.message, 'error');
+            }
+        }
+
+        // Lightbox functions with zoom and pan support
+        let currentZoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        function openLightbox(src, type) {
+            const content = document.getElementById('lightboxContent');
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+
+            if (type === 'image') {
+                content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <img src="${src}" alt="预览图片" class="zoomable" id="lightboxImage" style="transform: translate(0px, 0px) scale(1); cursor: grab; will-change: transform;">
+                    <div class="lightbox-controls">
+                        <button onclick="zoomOut()" title="缩小 (滚轮下)">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button onclick="zoomIn()" title="放大 (滚轮上)">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <button onclick="resetZoom()" title="重置">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                // Add wheel zoom listener
+                const img = document.getElementById('lightboxImage');
+                img.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+                // Add drag pan listeners
+                img.addEventListener('mousedown', startDrag);
+                img.addEventListener('mousemove', doDrag);
+                img.addEventListener('mouseup', endDrag);
+                img.addEventListener('mouseleave', endDrag);
+
+            } else if (type === 'pdf') {
+                content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <iframe src="${src}"></iframe>
+                `;
+            }
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function handleWheelZoom(e) {
+            e.preventDefault();
+            const oldZoom = currentZoom;
+            if (e.deltaY < 0) {
+                currentZoom = Math.min(currentZoom * 1.1, 5);
+            } else {
+                currentZoom = Math.max(currentZoom / 1.1, 0.25);
+            }
+            // Adjust pan to zoom towards mouse position
+            if (oldZoom !== currentZoom) {
+                const ratio = currentZoom / oldZoom;
+                panX *= ratio;
+                panY *= ratio;
+            }
+            updateZoom();
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.cursor = 'grabbing';
+                img.style.transition = 'none'; // Disable transition during drag for instant response
+            }
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            // Direct DOM manipulation for instant feedback
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+            }
+        }
+
+        function endDrag(e) {
+            isDragging = false;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+                img.style.transition = 'transform 0.1s ease-out'; // Re-enable smooth transition
+            }
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.25, 5);
+            updateZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.25, 0.25);
+            updateZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+            updateZoom();
+        }
+
+        function updateZoom() {
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+                document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+            }
+        }
+
+        function closeLightbox(event) {
+            if (event.target.id === 'lightbox' || event.target.classList.contains('lightbox-close')) {
+                document.getElementById('lightbox').classList.remove('active');
+                document.body.style.overflow = '';
+                currentZoom = 1;
+            }
+        }
+
+        // Delete material function
+        async function deleteMaterial(id, name) {
+            if (!confirm(`确定要删除物料 "${name}" 吗？此操作不可撤销。`)) {
+                return;
+            }
+
+            try {
+                await api.delete(`/materials/${id}`);
+                showToast('物料已删除');
+                loadMaterials();
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // Delete image function
+        async function deleteImage(materialId) {
+            if (!confirm('确定要删除此图片吗？')) {
+                return;
+            }
+
+            try {
+                await api.delete(`/materials/${materialId}/image`);
+                showToast('图片已删除');
+                // Refresh the edit modal
+                editMaterial(materialId);
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // Delete PDF function
+        async function deletePdf(materialId) {
+            if (!confirm('确定要删除此图纸PDF吗？')) {
+                return;
+            }
+
+            try {
+                await api.delete(`/materials/${materialId}/drawing`);
+                showToast('图纸已删除');
+                // Refresh the edit modal
+                editMaterial(materialId);
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // Export to Excel function
+        async function exportToExcel() {
+            try {
+                showToast('正在导出数据...', 'info');
+
+                // Fetch all materials (no pagination limit)
+                const data = await api.get('/materials?skip=0&limit=10000');
+
+                if (!data.items || data.items.length === 0) {
+                    showToast('没有数据可导出', 'warning');
+                    return;
+                }
+
+                // Create CSV content
+                const headers = ['SAP号码', '中文名称', '越南语名称', '种类', '细分', '车间', '库位', '设备', '单位', '最低库存', '规格', '购买链接'];
+                const rows = data.items.map(m => [
+                    m.sap_code || '',
+                    m.name_cn || '',
+                    m.name_vn || '',
+                    m.category || '',
+                    m.subcategory || '',
+                    m.workshop || '',
+                    m.location || '',
+                    m.equipment || '',
+                    m.unit || '',
+                    m.min_stock || 0,
+                    m.specification || '',
+                    m.purchase_link || ''
+                ]);
+
+                // Add BOM for Excel to recognize UTF-8
+                let csvContent = '\uFEFF';
+                csvContent += headers.join(',') + '\n';
+                csvContent += rows.map(row =>
+                    row.map(cell => {
+                        // Escape quotes and wrap in quotes if contains comma or newline
+                        const str = String(cell).replace(/"/g, '""');
+                        return str.includes(',') || str.includes('\n') || str.includes('"') ? `"${str}"` : str;
+                    }).join(',')
+                ).join('\n');
+
+                // Download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `物料清单_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+
+                showToast(`成功导出 ${data.items.length} 条物料`);
+            } catch (error) {
+                showToast('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // Export with supplier prices
+        async function exportWithPrices() {
+            try {
+                showToast('正在导出数据...', 'info');
+
+                // Build the same query params as loadMaterials to export filtered data
+                let url = `/materials?skip=0&limit=99999`;
+                const search = document.getElementById('searchInput').value;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                const filterSap = document.getElementById('filterSap').value.trim();
+                const filterNameCn = document.getElementById('filterNameCn').value.trim();
+                if (filterSap) url += `&sap_code=${encodeURIComponent(filterSap)}`;
+                if (filterNameCn) url += `&name_cn=${encodeURIComponent(filterNameCn)}`;
+
+                if (window.selectedSubcategories && window.selectedSubcategories.length > 0) {
+                    url += `&subcategories=${encodeURIComponent(window.selectedSubcategories.join(','))}`;
+                }
+                if (window.selectedLocations && window.selectedLocations.length > 0) {
+                    url += `&locations=${encodeURIComponent(window.selectedLocations.join(','))}`;
+                }
+                if (window.selectedWorkshops && window.selectedWorkshops.length > 0) {
+                    url += `&workshops=${encodeURIComponent(window.selectedWorkshops.join(','))}`;
+                }
+                if (window.selectedEquipments && window.selectedEquipments.length > 0) {
+                    url += `&equipments=${encodeURIComponent(window.selectedEquipments.join(','))}`;
+                }
+
+                const data = await api.get(url);
+                const items = data.items || [];
+
+                if (items.length === 0) {
+                    showToast('没有可导出的数据', 'warning');
+                    return;
+                }
+
+                // Build CSV
+                const headers = ['SAP号码', '中文名称', '越南语名称', '种类', '细分类别', '车间', '库位', '设备', '单位', '最低库存', '规格'];
+                let csv = '\ufeff' + headers.join(',') + '\n';
+                items.forEach(m => {
+                    const row = [
+                        m.sap_code || '', m.name_cn || '', m.name_vn || '',
+                        m.category || '', m.subcategory || '', m.workshop || '',
+                        m.location || '', m.equipment || '', m.unit || '',
+                        String(m.min_stock || 0), (m.specification || '').replace(/,/g, '，')
+                    ].map(v => `"${v.replace(/"/g, '""')}"`);
+                    csv += row.join(',') + '\n';
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `物料导出_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+
+                showToast(`导出成功，共 ${items.length} 条记录`);
+            } catch (error) {
+                showToast('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // Load on page load
+        loadMaterials();
+        // Submit Import
+        // Submit Import
+        async function submitImport() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('请选择文件', 'warning');
+                return;
+            }
+
+            const statusDiv = document.getElementById('importStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div class="spinner" style="margin: 0 auto 0.5rem;"></div>正在详细分析数据...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const result = await api.upload('/materials/import', formData);
+
+                let msg = `导入完成!<br>新增: ${result.added}<br>更新: ${result.updated}`;
+
+                if (result.errors && result.errors.length > 0) {
+                    msg += `<br><br><span style="color: var(--color-danger)">发现错误:</span><br>`;
+                    msg += `<div style="max-height: 150px; overflow-y: auto; font-size: 0.8rem; text-align: left; margin-top: 0.5rem; background: rgba(239, 68, 68, 0.1); padding: 0.5rem; border-radius: var(--radius-sm);">`;
+                    result.errors.forEach(err => {
+                        msg += `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 2px;">${err}</div>`;
+                    });
+                    msg += `</div>`;
+                }
+
+                statusDiv.innerHTML = msg;
+
+                if (result.added > 0 || result.updated > 0) {
+                    loadMaterials();
+                    // Only auto close if there are NO errors
+                    if (!result.errors || result.errors.length === 0) {
+                        setTimeout(() => closeModal('importModal'), 2000);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Import failed:', error);
+                statusDiv.innerHTML = `<span style="color: var(--color-danger)">导入失败:<br>${error.message}</span>`;
+            }
+        }
+
+        // Listen for language changes from sidebar
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'lang') {
+                loadMaterials(currentPage); // Reload current page to update names
+            }
+        });
+
+        // Also listen for custom event if sidebar dispatches one (it doesn't currently, but good practice)
+        window.addEventListener('lang-change', () => {
+            loadMaterials(currentPage);
+        });
+
+    </script>
+    <script>
+        // --- Tag Input System ---
+        const TagStateManager = {
+            state: {},
+
+            init(fieldId, initialValue) {
+                const values = initialValue ? initialValue.split(',').filter(v => v.trim()) : [];
+                this.state[fieldId] = new Set(values);
+                this.render(fieldId);
+                this.updateHiddenInput(fieldId);
+            },
+
+            add(fieldId, value) {
+                if (!value || !value.trim()) return;
+                const cleanValue = value.trim();
+                if (!this.state[fieldId]) this.state[fieldId] = new Set();
+                this.state[fieldId].add(cleanValue);
+                this.updateHiddenInput(fieldId);
+                this.render(fieldId);
+            },
+
+            remove(fieldId, value) {
+                if (!this.state[fieldId]) return;
+                this.state[fieldId].delete(value);
+                this.updateHiddenInput(fieldId);
+                this.render(fieldId);
+            },
+
+            updateHiddenInput(fieldId) {
+                const input = document.getElementById(fieldId);
+                if (input) {
+                    input.value = Array.from(this.state[fieldId] || []).join(',');
+                }
+            },
+
+            render(fieldId) {
+                const fieldName = fieldId.replace('edit_', '');
+                const container = document.getElementById(`tag_container_${fieldName}`);
+                const inputField = document.getElementById(`tag_input_${fieldName}`);
+
+                if (!container || !inputField) return;
+
+                // Remove existing badges
+                const badges = container.querySelectorAll('.tag-badge');
+                badges.forEach(b => b.remove());
+
+                // Create new badges
+                const values = Array.from(this.state[fieldId] || []).sort();
+                values.forEach(v => {
+                    const badge = document.createElement('div');
+                    badge.className = 'tag-badge';
+                    const vEscaped = v.replace(/'/g, "\\'");
+                    badge.innerHTML = `<span>${v}</span><span class="remove-tag" onclick="TagStateManager.remove('${fieldId}', '${vEscaped}')">×</span>`;
+                    container.insertBefore(badge, inputField);
+                });
+            }
+        };
+
+        function setupTagInput(fieldName) {
+            const input = document.getElementById(`tag_input_${fieldName}`);
+            const fieldId = `edit_${fieldName}`;
+
+            if (!input) return;
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    TagStateManager.add(fieldId, input.value);
+                    input.value = '';
+                }
+            });
+
+            input.addEventListener('change', (e) => {
+                if (input.value) {
+                    TagStateManager.add(fieldId, input.value);
+                    input.value = '';
+                }
+            });
+
+            // Focus container -> focus input
+            const container = document.getElementById(`tag_container_${fieldName}`);
+            if (container) {
+                container.addEventListener('click', (e) => {
+                    if (e.target === container) input.focus();
+                });
+            }
+        }
+
+        // Initialize tag inputs once
+        setupTagInput('workshop');
+        setupTagInput('equipment');
+
+        // Load config dropdowns for filter bar on page load
+        loadConfigDropdowns();
+
+        // Check for editId query parameter (from orders.html click)
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const editId = urlParams.get('editId');
+            if (editId) {
+                // Wait for page to load, then open edit modal
+                setTimeout(() => {
+                    editMaterial(parseInt(editId));
+                }, 500);
+            }
+        })();
+    </script>
+    <script>
+        // ===== Material Notes CRUD =====
+        async function loadNotesForDetail(materialId) {
+            const container = document.getElementById(`materialNotesList${materialId}`);
+            if (!container) return;
+            try {
+                const notes = await api.get(`/materials/${materialId}/notes`);
+                if (notes.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.8rem;">暂无说明记录</p>';
+                    return;
+                }
+                container.innerHTML = notes.map(n => `
+                    <div id="note-${n.id}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="flex: 1; white-space: pre-wrap;">${n.content}</span>
+                        <span style="color: var(--text-muted); font-size: 0.7rem; white-space: nowrap;">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
+                        <button class="btn btn-icon" onclick="editNoteInline(${n.id}, '${n.content.replace(/'/g, "\\'").replace(/\n/g, ' ')}', ${materialId})" style="padding: 2px;" title="编辑">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button class="btn btn-icon" onclick="deleteNote(${n.id}, ${materialId})" style="padding: 2px; color: var(--color-danger);" title="删除">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color: var(--color-danger);">加载失败</p>';
+            }
+        }
+
+        function addNoteInline(materialId) {
+            const container = document.getElementById(`materialNotesList${materialId}`);
+            if (!container) return;
+            // Check if there's already an add form
+            if (document.getElementById('newNoteForm')) return;
+            const formHtml = `
+                <div id="newNoteForm" style="display: flex; gap: 0.5rem; padding: 0.5rem 0;">
+                    <input type="text" id="newNoteInput" class="form-input" placeholder="输入新的说明..." style="flex: 1; font-size: 0.85rem;" autofocus>
+                    <button class="btn btn-primary btn-sm" onclick="saveNewNote(${materialId})" style="padding: 0.3rem 0.6rem;">保存</button>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('newNoteForm').remove()" style="padding: 0.3rem 0.6rem;">取消</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('afterbegin', formHtml);
+            document.getElementById('newNoteInput').focus();
+        }
+
+        async function saveNewNote(materialId) {
+            const input = document.getElementById('newNoteInput');
+            const content = input?.value.trim();
+            if (!content) { showToast('请输入说明内容', 'warning'); return; }
+            try {
+                await api.post(`/materials/${materialId}/notes`, { content });
+                showToast('说明已添加');
+                loadNotesForDetail(materialId);
+            } catch (e) {
+                showToast('添加失败: ' + e.message, 'error');
+            }
+        }
+
+        function editNoteInline(noteId, currentContent, materialId) {
+            const noteDiv = document.getElementById(`note-${noteId}`);
+            if (!noteDiv) return;
+            noteDiv.innerHTML = `
+                <input type="text" id="editNoteInput${noteId}" class="form-input" value="${currentContent}" style="flex: 1; font-size: 0.85rem;">
+                <button class="btn btn-primary btn-sm" onclick="saveEditNote(${noteId}, ${materialId})" style="padding: 0.3rem 0.6rem;">保存</button>
+                <button class="btn btn-secondary btn-sm" onclick="loadNotesForDetail(${materialId})" style="padding: 0.3rem 0.6rem;">取消</button>
+            `;
+            document.getElementById(`editNoteInput${noteId}`).focus();
+        }
+
+        async function saveEditNote(noteId, materialId) {
+            const input = document.getElementById(`editNoteInput${noteId}`);
+            const content = input?.value.trim();
+            if (!content) { showToast('说明内容不能为空', 'warning'); return; }
+            try {
+                await api.put(`/materials/notes/${noteId}`, { content });
+                showToast('说明已更新');
+                loadNotesForDetail(materialId);
+            } catch (e) {
+                showToast('更新失败: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteNote(noteId, materialId) {
+            if (!confirm('确定要删除这条说明吗？')) return;
+            try {
+                await api.delete(`/materials/notes/${noteId}`);
+                showToast('说明已删除');
+                loadNotesForDetail(materialId);
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+
+        // ===== Edit Modal Notes CRUD =====
+        async function loadNotesForEdit(materialId) {
+            const container = document.getElementById('editNotesContainer');
+            if (!container) return;
+            container.dataset.materialId = materialId;
+            try {
+                const notes = await api.get(`/materials/${materialId}/notes`);
+                if (notes.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">暂无说明记录，可在下方添加</p>';
+                    return;
+                }
+                container.innerHTML = notes.map(n => `
+                    <div id="editNote-${n.id}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="flex: 1; font-size: 0.85rem;">${n.content}</span>
+                        <span style="color: var(--text-muted); font-size: 0.7rem; white-space: nowrap;">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
+                        <button type="button" class="btn btn-icon" onclick="editNoteInEdit(${n.id}, '${n.content.replace(/'/g, "\\'").replace(/\n/g, ' ')}')" style="padding: 2px;" title="编辑">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button type="button" class="btn btn-icon" onclick="deleteNoteInEdit(${n.id})" style="padding: 2px; color: var(--color-danger);" title="删除">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color: var(--color-danger);">加载失败</p>';
+            }
+        }
+
+        async function saveNewNoteInEdit() {
+            const container = document.getElementById('editNotesContainer');
+            const materialId = container?.dataset.materialId;
+            const input = document.getElementById('editNewNoteInput');
+            const content = input?.value.trim();
+            if (!content) { showToast('请输入说明内容', 'warning'); return; }
+            if (!materialId) return;
+            try {
+                await api.post(`/materials/${materialId}/notes`, { content });
+                input.value = '';
+                showToast('说明已添加');
+                loadNotesForEdit(materialId);
+            } catch (e) {
+                showToast('添加失败: ' + e.message, 'error');
+            }
+        }
+
+        function editNoteInEdit(noteId, currentContent) {
+            const noteDiv = document.getElementById(`editNote-${noteId}`);
+            if (!noteDiv) return;
+            noteDiv.innerHTML = `
+                <input type="text" id="editNoteEditInput${noteId}" class="form-input" value="${currentContent}" style="flex: 1; font-size: 0.85rem;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveEditNoteInEdit(${noteId})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">保存</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="loadNotesForEdit(document.getElementById('editNotesContainer').dataset.materialId)" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">取消</button>
+            `;
+            document.getElementById(`editNoteEditInput${noteId}`).focus();
+        }
+
+        async function saveEditNoteInEdit(noteId) {
+            const input = document.getElementById(`editNoteEditInput${noteId}`);
+            const content = input?.value.trim();
+            if (!content) { showToast('说明不能为空', 'warning'); return; }
+            const materialId = document.getElementById('editNotesContainer')?.dataset.materialId;
+            try {
+                await api.put(`/materials/notes/${noteId}`, { content });
+                showToast('说明已更新');
+                if (materialId) loadNotesForEdit(materialId);
+            } catch (e) {
+                showToast('更新失败: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteNoteInEdit(noteId) {
+            if (!confirm('确定要删除这条说明吗？')) return;
+            const materialId = document.getElementById('editNotesContainer')?.dataset.materialId;
+            try {
+                await api.delete(`/materials/notes/${noteId}`);
+                showToast('说明已删除');
+                if (materialId) loadNotesForEdit(materialId);
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

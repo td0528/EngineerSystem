@@ -1,0 +1,2740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>采购订单 - VONIKO Factory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/i18n.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .order-type-tabs {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .order-type-tab {
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .order-type-tab:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .order-type-tab.active {
+            background: var(--accent-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .order-item-row {
+            background: var(--bg-secondary);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: var(--spacing-md);
+            align-items: end;
+        }
+
+        .search-dropdown {
+            position: relative;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .search-results.show {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: var(--spacing-md);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-result-item:hover {
+            background: rgba(14, 165, 233, 0.1);
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .order-summary {
+            background: var(--bg-tertiary);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        /* Filter row inputs - dark mode styling */
+        .filter-row input,
+        .filter-row select {
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        .filter-row input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Material thumbnail styles */
+        .material-thumb {
+            position: relative;
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .material-thumb .thumb-item {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            object-fit: cover;
+        }
+
+        .material-thumb .thumb-item:hover {
+            transform: scale(1.1);
+        }
+
+        .material-thumb .pdf-mini {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--color-danger);
+        }
+
+        .material-thumb .pdf-mini:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Lightbox overlay styles */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: var(--radius-md);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-content iframe {
+            width: 80vw;
+            height: 85vh;
+            border: none;
+            border-radius: var(--radius-md);
+            background: white;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .lightbox-close:hover {
+            color: var(--accent-primary);
+        }
+
+        .lightbox-controls {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .lightbox-controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .lightbox-controls button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .lightbox-content img.zoomable {
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+
+        .zoom-level {
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        /* Inline status select in table */
+        .inline-status-select {
+            padding: 0.25rem 0.4rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            appearance: auto;
+            min-width: 90px;
+        }
+
+        .inline-status-select.status-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .inline-status-select.status-info {
+            background: rgba(14, 165, 233, 0.15);
+            color: #0ea5e9;
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+
+        .inline-status-select.status-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        /* Filter row cascading dropdowns */
+        .filter-row select.filter-cascade {
+            width: 100%;
+            padding: 0.3rem;
+            font-size: 0.75rem;
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: var(--radius-sm);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1 data-i18n="orders.title">采购订单管理</h1>
+                    <span class="badge" id="totalCount">0 条订单</span>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="openModal('createOrderModal')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="16" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                        </svg>
+                        <span data-i18n="orders.createOrder">新建采购订单</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="openModal('importOrderModal')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span>导入数据</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportOrders()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <span>导出Excel</span>
+                    </button>
+                </div>
+            </div>
+
+
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="search-box" style="flex: 1; min-width: 250px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input type="text" class="form-input" id="searchInput" placeholder="搜索PO号、SAP码、物料名称、车间..."
+                        oninput="debouncedSearch()">
+                </div>
+            </div>
+
+            <!-- Orders Table - Item Level -->
+            <div class="card">
+                <div class="table-container">
+                    <table class="table" id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;"><input type="checkbox" id="selectAllOrders"
+                                        onchange="toggleSelectAllOrders(this)" title="全选"></th>
+                                <th><span data-i18n="orders.itemStatus">状态</span></th>
+                                <th class="sortable" onclick="sortOrderTable('order_date')"><span
+                                        data-i18n="orders.orderDate">采购日期</span> <span class="sort-icon"></span></th>
+                                <th>图片/图纸</th>
+                                <th class="sortable" onclick="sortOrderTable('po_number')"><span
+                                        data-i18n="orders.poNumber">PO号</span> <span class="sort-icon"></span></th>
+                                <th class="sortable" onclick="sortOrderTable('supplier_name')"><span
+                                        data-i18n="orders.supplier">供应商</span> <span class="sort-icon"></span></th>
+                                <th class="sortable" onclick="sortOrderTable('sap_code')"><span
+                                        data-i18n="materials.sapCode">SAP号</span> <span class="sort-icon"></span></th>
+                                <th class="sortable" onclick="sortOrderTable('material_name')"><span
+                                        data-i18n="orders.materialName">物料名称</span> <span class="sort-icon"></span>
+                                </th>
+                                <th><span data-i18n="orders.quantity">数量</span></th>
+                                <th><span data-i18n="orders.unitPrice">单价</span></th>
+                                <th><span data-i18n="orders.subtotal">小计</span></th>
+                                <th class="sortable" onclick="sortOrderTable('workshop')"><span
+                                        data-i18n="materials.workshop">车间/设备</span> <span class="sort-icon"></span>
+                                </th>
+                                <th><span data-i18n="orders.arrivalDate">到货时间</span></th>
+                            </tr>
+                            <tr class="filter-row">
+                                <th></th>
+                                <th></th>
+                                <th>
+                                    <select id="filterStatus" class="filter-cascade" onchange="applyOrderFilters()"
+                                        style="width:100%;padding:0.3rem;font-size:0.75rem;">
+                                        <option value="">所有状态</option>
+                                        <option value="未下单">未下单</option>
+                                        <option value="已下单">已下单</option>
+                                        <option value="已送货">已送货</option>
+                                        <option value="已收货">已收货</option>
+                                        <option value="已开发票">已开发票</option>
+                                        <option value="退货中">退货中</option>
+                                    </select>
+                                </th>
+                                <th></th>
+                                <th></th>
+                                <th><input type="text" id="filterPO" placeholder="筛选PO..." oninput="applyOrderFilters()"
+                                        style="width:100%;padding:0.3rem;font-size:0.75rem;"></th>
+                                <th><input type="text" id="filterSupplier" placeholder="筛选供应商..."
+                                        oninput="applyOrderFilters()"
+                                        style="width:100%;padding:0.3rem;font-size:0.75rem;"></th>
+                                <th><input type="text" id="filterSapOrder" placeholder="筛选SAP..."
+                                        oninput="applyOrderFilters()"
+                                        style="width:100%;padding:0.3rem;font-size:0.75rem;"></th>
+                                <th><input type="text" id="filterMaterial" placeholder="筛选物料..."
+                                        oninput="applyOrderFilters()"
+                                        style="width:100%;padding:0.3rem;font-size:0.75rem;"></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th>
+                                    <select id="filterWorkshopOrder" class="filter-cascade"
+                                        onchange="onFilterWorkshopChange(); applyOrderFilters()">
+                                        <option value="">所有车间</option>
+                                    </select>
+                                    <select id="filterEquipmentOrder" class="filter-cascade"
+                                        onchange="applyOrderFilters()" style="margin-top:2px;">
+                                        <option value="">所有设备</option>
+                                    </select>
+                                </th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersBody">
+                            <tr>
+                                <td colspan="13" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                                    加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pagination"></div>
+                <!-- Batch Delete Bar for Orders -->
+                <div id="orderBatchDeleteBar"
+                    style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg-secondary); border:1px solid var(--color-danger); border-radius:var(--radius-lg); padding:0.8rem 1.5rem; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:999; align-items:center; gap:1rem;">
+                    <span id="orderBatchDeleteCount" style="font-weight:600;">已选择 0 项</span>
+                    <button class="btn" style="background:var(--color-danger); color:white; padding:0.4rem 1rem;"
+                        onclick="batchDeleteOrderItems(false)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        批量删除
+                    </button>
+                    <button class="btn"
+                        style="background:#dc2626; color:white; padding:0.4rem 1rem; border: 2px dashed #fca5a5;"
+                        onclick="batchDeleteOrderItems(true)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                        强制删除 (管理员)
+                    </button>
+                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;"
+                        onclick="clearOrderSelection()">取消选择</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Import Order Modal -->
+    <div class="modal-overlay" id="importOrderModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>导入订单数据</h3>
+                <button class="btn btn-icon" onclick="closeModal('importOrderModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div
+                    style="background: var(--bg-tertiary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg);">
+                    <h5 style="margin-bottom: var(--spacing-sm); color: var(--text-primary);">📝如何导入？</h5>
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">
+                        上传 <strong>Excel</strong> 或 <strong>CSV</strong> 文件。<br>
+                        必须包含列：SAP号码、物料名称、数量。<br>
+                        可选列：供应商、单价、车间、设备、状态、到货时间。<br>
+                        系统会按SAP号码匹配已有物料，按供应商名称匹配供应商。
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="importOrderFile">选择文件 (.csv, .xlsx)</label>
+                    <input type="file" id="importOrderFile" class="form-input" accept=".csv, .xlsx, .xls">
+                </div>
+                <div id="importOrderStatus"
+                    style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md); display: none;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importOrderModal')">取消</button>
+                <button class="btn btn-primary" onclick="submitOrderImport()">开始导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Order Modal -->
+    <div class="modal-overlay" id="createOrderModal">
+        <div class="modal" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>新建采购订单</h3>
+                <button class="btn btn-icon" onclick="closeModal('createOrderModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createOrderForm">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-md);">
+
+                        <div class="form-group">
+                            <label class="form-label">供应商</label>
+                            <div class="search-dropdown">
+                                <input type="text" class="form-input" id="supplierSearch" placeholder="输入供应商名称搜索..."
+                                    oninput="searchSuppliers(this.value)">
+                                <input type="hidden" name="supplier_id" id="supplierId">
+                                <div class="search-results" id="supplierResults"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">采购日期 *</label>
+                            <input type="date" class="form-input" name="order_date" required>
+                        </div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: var(--spacing-lg);">
+                        💡 PO号将自动生成：供应商名称_日期，如：ABC公司_20260116
+                    </p>
+
+                    <hr style="border-color: var(--border-color); margin: var(--spacing-lg) 0;">
+
+                    <div class="card-header" style="padding: 0; border: none; margin-bottom: var(--spacing-md);">
+                        <h4>订单明细</h4>
+                        <button type="button" class="btn btn-secondary" onclick="addOrderItem()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="16" />
+                                <line x1="8" y1="12" x2="16" y2="12" />
+                            </svg>
+                            添加物料
+                        </button>
+                    </div>
+
+                    <div id="orderItems">
+                        <!-- Order items added dynamically -->
+                    </div>
+
+                    <div class="order-summary">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>订单总计</span>
+                            <span style="font-size: 1.5rem; font-weight: 700; color: var(--accent-primary);"
+                                id="orderTotal">0 VND</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createOrderModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveOrder()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    保存订单
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay" id="orderDetailModal">
+        <div class="modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3 id="orderDetailTitle">订单详情</h3>
+                <button class="btn btn-icon" onclick="closeModal('orderDetailModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Nested Material Creation Modal -->
+    <div class="modal-overlay" id="createMaterialModal" style="z-index: 1100;">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>快速新建物料</h3>
+                <button class="btn btn-icon" onclick="closeModal('createMaterialModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="quickMaterialForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label">SAP号码 *</label>
+                            <input type="text" class="form-input" id="newMaterialSapCode" required
+                                placeholder="例: 10001234">
+                            <button type="button" class="btn" id="orderSapPendingBtn"
+                                onclick="toggleSapPending('newMaterialSapCode', 'orderSapPendingBtn')"
+                                style="margin-top:4px; padding:2px 8px; font-size:0.75rem; color:var(--color-warning); border:1px dashed var(--color-warning); background:rgba(245,158,11,0.08); border-radius:4px; cursor:pointer;">⏳
+                                暂无号码，申请中</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">中文名称 *</label>
+                            <input type="text" class="form-input" id="newMaterialNameCn" required placeholder="物料名称">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">越南语名称</label>
+                            <input type="text" class="form-input" id="newMaterialNameVn" placeholder="Tên vật liệu">
+                        </div>
+                        <input type="hidden" id="newMaterialCategory">
+                        <div class="form-group">
+                            <label class="form-label">细分类别</label>
+                            <select class="form-select" id="newMaterialSubcategory"
+                                onchange="onSubcategoryChange(this, 'newMaterialCategory')">
+                                <option value="">请选择种类...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">车间</label>
+                            <select class="form-select" id="newMaterialWorkshop"
+                                onchange="updateEquipmentOptions(this, 'newMaterialEquipment')">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">使用设备</label>
+                            <select class="form-select" id="newMaterialEquipment">
+                                <option value="">请先选择车间</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">规格说明</label>
+                            <input type="text" class="form-input" id="newMaterialSpecs" placeholder="尺寸、型号等">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">物料图片</label>
+                            <input type="file" class="form-input" id="newMaterialImage" accept="image/*"
+                                style="padding: 0.5rem;">
+                            <small style="color: var(--text-muted);">支持 JPG, PNG 格式</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">规格PDF</label>
+                            <input type="file" class="form-input" id="newMaterialPdf" accept=".pdf"
+                                style="padding: 0.5rem;">
+                            <small style="color: var(--text-muted);">支持 PDF 格式</small>
+                        </div>
+                    </div>
+                </form>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: var(--spacing-md);">
+                    💡 创建后可在材料搜索中找到此物料
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createMaterialModal')">取消</button>
+                <button class="btn btn-primary" onclick="quickCreateMaterial()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    创建物料
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Material Edit Modal -->
+    <div class="modal-overlay" id="editMaterialModal" style="z-index: 1100;">
+        <div class="modal" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                    <h3 style="margin: 0;">编辑物料 <span id="editMaterialSapCode"
+                            style="color: var(--accent-primary);"></span></h3>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                        onclick="openPriceHistory(document.getElementById('editMaterialId').value)">
+                        📊 查看历史价格走势
+                    </button>
+                </div>
+                <button class="btn btn-icon" onclick="closeModal('editMaterialModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editMaterialForm">
+                    <input type="hidden" id="editMaterialId">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label">SAP号码</label>
+                            <input type="text" class="form-input" id="editMatSapCode">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">中文名称 *</label>
+                            <input type="text" class="form-input" id="editMatNameCn" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">越南语名称</label>
+                            <input type="text" class="form-input" id="editMatNameVn">
+                        </div>
+                        <input type="hidden" id="editMatCategory">
+                        <div class="form-group">
+                            <label class="form-label">细分类别</label>
+                            <select class="form-select" id="editMatSubcategory"
+                                onchange="onSubcategoryChange(this, 'editMatCategory')">
+                                <option value="">请选择或输入</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">车间</label>
+                            <select class="form-select" id="editMatWorkshop">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">使用设备</label>
+                            <select class="form-select" id="editMatEquipment">
+                                <option value="">请先选择车间</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">库位</label>
+                            <input type="text" class="form-input" id="editMatLocation">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">购买链接</label>
+                            <input type="url" class="form-input" id="editMatPurchaseLink" placeholder="https://...">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">说明记录</label>
+                            <div id="editOrderMatNotesContainer"
+                                style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--spacing-md); min-height: 60px; max-height: 200px; overflow-y: auto;">
+                                <p style="color: var(--text-muted); font-size: 0.85rem;">加载中...</p>
+                            </div>
+                            <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-sm);">
+                                <input type="text" id="editOrderMatNewNoteInput" class="form-input"
+                                    placeholder="输入新说明..." style="flex: 1; font-size: 0.85rem;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="saveOrderMatNewNote()"
+                                    style="white-space: nowrap;">+ 添加</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image Preview -->
+                    <div style="margin-top: var(--spacing-md);">
+                        <label class="form-label">物料图片</label>
+                        <div id="editMatImagePreview" style="margin-bottom: var(--spacing-sm);"></div>
+                        <input type="file" class="form-input" id="editMatImage" accept="image/*"
+                            style="padding: 0.5rem;" onchange="previewOrderMatImage(this)">
+                        <small style="color: var(--text-muted);">选择新图片将覆盖现有图片</small>
+                    </div>
+
+                    <!-- PDF Preview -->
+                    <div style="margin-top: var(--spacing-md);">
+                        <label class="form-label">规格PDF</label>
+                        <div id="editMatPdfPreview" style="margin-bottom: var(--spacing-sm);"></div>
+                        <input type="file" class="form-input" id="editMatPdf" accept=".pdf" style="padding: 0.5rem;"
+                            onchange="previewOrderMatPdf(this)">
+                        <small style="color: var(--text-muted);">选择新PDF将覆盖现有文件</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editMaterialModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveMaterialEdit()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Order Item Modal -->
+    <div class="modal-overlay" id="editOrderModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="editOrderTitle">编辑订单明细</h3>
+                <button class="btn btn-icon" onclick="closeModal('editOrderModal')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editOrderForm">
+                    <input type="hidden" id="editOrderItemId">
+                    <div class="form-group">
+                        <label class="form-label">当前PO号</label>
+                        <input type="text" class="form-input" id="editOrderPO" readonly
+                            style="background: var(--bg-tertiary);">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">供应商 <small
+                                style="color: var(--text-muted);">(修改后将更新PO号)</small></label>
+                        <div class="search-dropdown">
+                            <input type="text" class="form-input" id="editOrderSupplierSearch" placeholder="搜索供应商..."
+                                oninput="searchSuppliersForEdit(this.value)">
+                            <input type="hidden" id="editOrderSupplierId">
+                            <input type="hidden" id="editOrderOriginalSupplierId">
+                            <div class="search-results" id="editSupplierResults"></div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editOrderModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveOrderItemEdit()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content" id="lightboxContent"></div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script>
+        checkAuth();
+
+        let currentPage = 1;
+        let currentType = '';
+        const pageSize = 20;
+        let orderItems = [];
+        let itemCounter = 0;
+        let allOrderItems = [];
+        let orderSort = { field: null, order: 'asc' };
+
+        const debouncedSearch = debounce(() => loadOrderItems(), 300);
+
+        // Set default date to today
+        document.querySelector('input[name="order_date"]').valueAsDate = new Date();
+
+        // Sort order table
+        function sortOrderTable(field) {
+            if (orderSort.field === field) {
+                orderSort.order = orderSort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                orderSort.field = field;
+                orderSort.order = 'asc';
+            }
+
+            // Update sort icon classes
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('asc', 'desc');
+                if (th.getAttribute('onclick').includes(`'${field}'`)) {
+                    th.classList.add(orderSort.order);
+                }
+            });
+
+            loadOrderItems(1);
+        }
+
+        // Apply order filters (client-side)
+        function applyOrderFilters() {
+            if (!allOrderItems || allOrderItems.length === 0) return;
+
+            const filterPO = document.getElementById('filterPO')?.value.toLowerCase() || '';
+            const filterSupplier = document.getElementById('filterSupplier')?.value.toLowerCase() || '';
+            const filterSapOrder = document.getElementById('filterSapOrder')?.value.toLowerCase() || '';
+            const filterMaterial = document.getElementById('filterMaterial')?.value.toLowerCase() || '';
+            const filterWorkshop = document.getElementById('filterWorkshopOrder')?.value || '';
+            const filterEquipment = document.getElementById('filterEquipmentOrder')?.value || '';
+            const filterStatus = document.getElementById('filterStatus')?.value || '';
+
+            let filtered = allOrderItems.filter(item => {
+                if (filterPO && !(item.po_number || '').toLowerCase().includes(filterPO)) return false;
+                if (filterSupplier && !(item.supplier_name || '').toLowerCase().includes(filterSupplier)) return false;
+                if (filterSapOrder && !(item.sap_code || '').toLowerCase().includes(filterSapOrder)) return false;
+                if (filterMaterial && !(item.material_name || '').toLowerCase().includes(filterMaterial)) return false;
+                if (filterWorkshop && (item.workshop || '') !== filterWorkshop) return false;
+                if (filterEquipment && (item.equipment || '') !== filterEquipment) return false;
+                if (filterStatus && (item.item_status || '未下单') !== filterStatus) return false;
+                return true;
+            });
+
+            // Apply sorting
+            if (orderSort.field) {
+                filtered.sort((a, b) => {
+                    let va = a[orderSort.field];
+                    let vb = b[orderSort.field];
+                    if (orderSort.field === 'order_date') {
+                        va = va || '';
+                        vb = vb || '';
+                    } else {
+                        va = (va || '').toString().toLowerCase();
+                        vb = (vb || '').toString().toLowerCase();
+                    }
+                    const cmp = va.toString().localeCompare(vb.toString(), 'zh-CN');
+                    return orderSort.order === 'asc' ? cmp : -cmp;
+                });
+            }
+
+            renderOrderItems(filtered);
+        }
+
+        // Handle workshop filter change -> update equipment dropdown
+        function onFilterWorkshopChange() {
+            const workshopVal = document.getElementById('filterWorkshopOrder').value;
+            const eqSelect = document.getElementById('filterEquipmentOrder');
+            if (!workshopVal) {
+                eqSelect.innerHTML = '<option value="">所有设备</option>';
+                return;
+            }
+            const equipments = window.groupedEquipment[workshopVal] || [];
+            let html = '<option value="">所有设备</option>';
+            equipments.forEach(eq => {
+                html += `<option value="${eq.value}">${eq.value}</option>`;
+            });
+            eqSelect.innerHTML = html;
+        }
+
+        // Clear order filters
+        function clearOrderFilters() {
+            ['filterPO', 'filterSupplier', 'filterSapOrder', 'filterMaterial', 'filterStatus'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const wsFilter = document.getElementById('filterWorkshopOrder');
+            if (wsFilter) wsFilter.value = '';
+            const eqFilter = document.getElementById('filterEquipmentOrder');
+            if (eqFilter) eqFilter.innerHTML = '<option value="">所有设备</option>';
+            orderSort = { field: null, order: 'asc' };
+            if (allOrderItems.length > 0) {
+                renderOrderItems(allOrderItems);
+            }
+        }
+
+        function filterByType(btn, type) {
+            document.querySelectorAll('.order-type-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            currentType = type;
+            loadOrderItems();
+        }
+
+
+        async function loadOrderItems(page = 1) {
+            currentPage = page;
+
+            const tbody = document.getElementById('ordersBody');
+
+            try {
+                let url = `/orders/items?skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+                const search = document.getElementById('searchInput').value;
+
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                if (orderSort.field) {
+                    url += `&sort_by=${orderSort.field}&sort_order=${orderSort.order}`;
+                } else {
+                    url += `&sort_by=order_date&sort_order=desc`;
+                }
+
+                const data = await api.get(url);
+
+                document.getElementById('totalCount').textContent = `${data.total} 条明细`;
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 3rem;">暂无订单数据</td></tr>';
+                    allOrderItems = [];
+                } else {
+                    allOrderItems = data.items;
+                    renderOrderItems(data.items);
+                }
+
+                renderPagination(data.total, currentPage, pageSize, document.getElementById('pagination'), 'loadOrderItems');
+
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // Render order items table
+        function renderOrderItems(items) {
+            const tbody = document.getElementById('ordersBody');
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 3rem;">没有匹配的数据</td></tr>';
+                return;
+            }
+            tbody.innerHTML = items.map(item => {
+                // Build usage info with tooltip
+                const usageInfo = [];
+                if (item.workshop) usageInfo.push(item.workshop);
+                if (item.equipment) usageInfo.push(item.equipment);
+                const usageText = usageInfo.join(' / ') || '-';
+                const tooltipText = item.purpose ? `用途: ${item.purpose}` : '';
+
+                // Status inline select
+                const currentStatus = item.item_status || '未下单';
+                const itemStatusClass = getItemStatusClass(currentStatus);
+
+                let statusHtml = '';
+                if (currentStatus === '未下单' || currentStatus === '已下单') {
+                    const statusOptions = ['未下单', '已下单'];
+                    const statusSelectHtml = statusOptions.map(s =>
+                        `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s}</option>`
+                    ).join('');
+                    statusHtml = `
+                        <select class="inline-status-select status-${itemStatusClass}" 
+                                onchange="updateOrderItemStatus(${item.id}, this)">
+                            ${statusSelectHtml}
+                        </select>
+                    `;
+                } else {
+                    statusHtml = `<span class="badge badge-${itemStatusClass}" style="padding: 0.4rem 0.6rem;">${currentStatus}</span>`;
+                }
+
+                return `
+                <tr>
+                    <td><input type="checkbox" class="order-checkbox" value="${item.id}" onchange="updateOrderSelection()"></td>
+                    <td>
+                        ${statusHtml}
+                    </td>
+                    <td>${formatDate(item.order_date)}</td>
+                    <td>
+                        <div class="material-thumb">
+                            ${item.material_image
+                        ? `<img src="${item.material_image}" class="thumb-item" onclick="openLightbox('${item.material_image}', 'image')" title="点击查看大图">`
+                        : ''}
+                            ${item.material_pdf
+                        ? `<div class="pdf-mini" onclick="openLightbox('${item.material_pdf}', 'pdf')" title="点击查看PDF图纸"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`
+                        : ''}
+                            ${!item.material_image && !item.material_pdf ? '<span style="color:var(--text-muted);font-size:0.8rem;">-</span>' : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <strong>${item.po_number}</strong>
+                        <button class="btn btn-icon btn-sm" onclick="openEditOrderItemModal(${item.id}, '${item.po_number}')" title="编辑此明细" style="margin-left: 4px; padding: 2px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
+                    </td>
+                    <td>${item.supplier_name || '<span style="color:var(--text-muted);">-</span>'}</td>
+                    <td class="selectable">${item.sap_code}</td>
+                    <td class="selectable">
+                        <a href="javascript:void(0)" onclick="openMaterialModal(${item.material_id}, ${item.id})" 
+                           style="color: var(--accent-primary); text-decoration: underline; cursor: pointer;">
+                            ${item.material_name}
+                        </a>
+                    </td>
+                    <td>
+                        <input type="number" value="${item.ordered_qty}" 
+                            class="form-input" style="width: 60px; padding: 0.3rem; text-align: center;"
+                            onchange="updateOrderItem(${item.id}, 'ordered_qty', this.value)">
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <input type="number" value="${item.unit_price || 0}" step="any"
+                            class="form-input" style="width: 80px; padding: 0.3rem; text-align: right; display:inline-block; vertical-align:middle;"
+                            onchange="updateOrderItem(${item.id}, 'unit_price', this.value)">
+                        <button class="currency-toggle" data-item-id="${item.id}" 
+                            onclick="toggleCurrency(${item.id}, this)"
+                            style="display:inline-block; vertical-align:middle; padding:2px 5px; font-size:0.7rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:2px;"
+                            title="点击切换货币">${item.currency || 'VND'}</button>
+                    </td>
+                    <td><strong>${formatCurrency(item.total_price, item.currency || 'VND')}</strong></td>
+                    <td title="${tooltipText}" style="cursor: ${item.purpose ? 'help' : 'default'};">${usageText}</td>
+                    <td>
+                        <input type="date" value="${item.arrival_date || ''}" 
+                            class="form-input" style="width: 130px; padding: 0.3rem;"
+                            onchange="updateOrderItem(${item.id}, 'arrival_date', this.value)">
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        // === Batch Delete for Orders ===
+        function toggleSelectAllOrders(checkbox) {
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = checkbox.checked);
+            updateOrderSelection();
+        }
+
+        function updateOrderSelection() {
+            const checked = document.querySelectorAll('.order-checkbox:checked');
+            const bar = document.getElementById('orderBatchDeleteBar');
+            if (checked.length > 0) {
+                bar.style.display = 'flex';
+                document.getElementById('orderBatchDeleteCount').textContent = `已选择 ${checked.length} 项`;
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function clearOrderSelection() {
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('selectAllOrders');
+            if (selectAll) selectAll.checked = false;
+            document.getElementById('orderBatchDeleteBar').style.display = 'none';
+        }
+
+        async function batchDeleteOrderItems(force = false) {
+            const checked = document.querySelectorAll('.order-checkbox:checked');
+            const ids = Array.from(checked).map(cb => parseInt(cb.value));
+            if (ids.length === 0) return;
+
+            let password = null;
+            if (force) {
+                const { value: pwd } = await Swal.fire({
+                    title: '强制删除需要密码',
+                    input: 'password',
+                    inputLabel: '请输入管理员密码',
+                    inputPlaceholder: '请输入密码(970528)',
+                    showCancelButton: true,
+                    confirmButtonText: '确认删除',
+                    cancelButtonText: '取消',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return '你需要输入密码！';
+                        }
+                    }
+                });
+                if (!pwd) return;
+                password = pwd;
+            } else {
+                if (!confirm(`确定要删除选中的 ${ids.length} 条订单明细吗？`)) return;
+            }
+
+            try {
+                const payload = { ids: ids, force: force };
+                if (force) payload.password = password;
+
+                const result = await api.post('/orders/items/batch-delete', payload);
+                showToast(result.message);
+                clearOrderSelection();
+                loadOrderItems(currentPage);
+            } catch (error) {
+                showToast('批量删除失败: ' + error.message, 'error');
+            }
+        }
+
+        function getItemStatusClass(status) {
+            const classes = {
+                '未下单': 'warning',
+                '已下单': 'info',
+                '已送货': 'info',
+                '已收货': 'success',
+                '已开发票': 'success',
+                '退货中': 'danger'
+            };
+            return classes[status] || 'neutral';
+        }
+
+
+        // Inline update order item
+        async function updateOrderItem(itemId, field, value) {
+            try {
+                const data = {};
+                // Handle different field types
+                if (field === 'ordered_qty' || field === 'unit_price') {
+                    data[field] = parseFloat(value) || 0;
+                } else if (field === 'arrival_date') {
+                    data[field] = value || null; // Send as string or null
+                } else {
+                    data[field] = value;
+                }
+                await api.put(`/orders/items/${itemId}`, data);
+                showToast('已更新');
+                loadOrderItems(currentPage);
+            } catch (error) {
+                showToast('更新失败: ' + error.message, 'error');
+            }
+        }
+
+        // Toggle currency between VND and USD
+        async function toggleCurrency(itemId, btn) {
+            const current = btn.textContent.trim();
+            const newCurrency = current === 'VND' ? 'USD' : 'VND';
+            try {
+                await api.put(`/orders/items/${itemId}`, { currency: newCurrency });
+                btn.textContent = newCurrency;
+                showToast(`货币已切换为 ${newCurrency}`);
+                loadOrderItems(currentPage);
+            } catch (error) {
+                showToast('切换失败: ' + error.message, 'error');
+            }
+        }
+
+        // Track current order item ID when opening material modal from orders
+        let _currentEditOrderItemId = null;
+
+        // Open material edit modal (inline modal)
+        async function openMaterialModal(materialId, orderItemId) {
+            _currentEditOrderItemId = orderItemId || null;
+            try {
+                const material = await api.get(`/materials/${materialId}`);
+
+                // Populate form fields
+                document.getElementById('editMaterialId').value = material.id;
+                document.getElementById('editMaterialSapCode').textContent = material.sap_code;
+                document.getElementById('editMatSapCode').value = material.sap_code;
+                document.getElementById('editMatNameCn').value = material.name_cn || '';
+                document.getElementById('editMatNameVn').value = material.name_vn || '';
+                document.getElementById('editMatCategory').value = material.category || '';
+
+                // Set subcategory select value
+                const subSelect = document.getElementById('editMatSubcategory');
+                if (subSelect) {
+                    const exists = Array.from(subSelect.options).some(op => op.value === material.subcategory);
+                    subSelect.value = exists ? material.subcategory : '';
+                }
+
+                // If opened from order item context, show that item's workshop/equipment
+                // Otherwise show the material's aggregate values
+                const wsSelect = document.getElementById('editMatWorkshop');
+                if (wsSelect) {
+                    if (_currentEditOrderItemId) {
+                        // Find the order item to get its specific workshop/equipment
+                        const orderItem = allOrderItems.find(i => i.id === _currentEditOrderItemId);
+                        if (orderItem) {
+                            wsSelect.value = orderItem.workshop || '';
+                            updateEquipmentOptions(wsSelect, 'editMatEquipment', orderItem.equipment);
+                        } else {
+                            wsSelect.value = material.workshop || '';
+                            updateEquipmentOptions(wsSelect, 'editMatEquipment', material.equipment);
+                        }
+                    } else {
+                        wsSelect.value = material.workshop || '';
+                        updateEquipmentOptions(wsSelect, 'editMatEquipment', material.equipment);
+                    }
+                }
+                document.getElementById('editMatLocation').value = material.location || '';
+                document.getElementById('editMatPurchaseLink').value = material.purchase_link || '';
+                loadOrderMatNotes(materialId);
+
+                // Image preview
+                const imagePreview = document.getElementById('editMatImagePreview');
+                if (material.image) {
+                    imagePreview.innerHTML = `<img src="${material.image}" style="max-width: 200px; max-height: 150px; border-radius: var(--radius-md); cursor: pointer;" onclick="openLightbox('${material.image}', 'image')">`;
+                } else {
+                    imagePreview.innerHTML = '<span style="color: var(--text-muted);">暂无图片</span>';
+                }
+
+                // PDF preview
+                const pdfPreview = document.getElementById('editMatPdfPreview');
+                if (material.drawing_pdf) {
+                    pdfPreview.innerHTML = `<a href="${material.drawing_pdf}" target="_blank" class="btn btn-secondary btn-sm">📄 查看PDF图纸</a>`;
+                } else {
+                    pdfPreview.innerHTML = '<span style="color: var(--text-muted);">暂无PDF</span>';
+                }
+
+                // Reset file inputs
+                document.getElementById('editMatImage').value = '';
+                document.getElementById('editMatPdf').value = '';
+
+                openModal('editMaterialModal');
+            } catch (error) {
+                showToast('加载物料失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveMaterialEdit() {
+            const materialId = document.getElementById('editMaterialId').value;
+            const data = {
+                sap_code: document.getElementById('editMatSapCode').value.trim() || null,
+                name_cn: document.getElementById('editMatNameCn').value.trim(),
+                name_vn: document.getElementById('editMatNameVn').value.trim() || null,
+                category: document.getElementById('editMatCategory').value,
+                subcategory: document.getElementById('editMatSubcategory').value.trim() || null,
+                workshop: document.getElementById('editMatWorkshop').value.trim() || null,
+                equipment: document.getElementById('editMatEquipment').value.trim() || null,
+                location: document.getElementById('editMatLocation').value.trim() || null,
+                purchase_link: document.getElementById('editMatPurchaseLink').value.trim() || null
+            }; if (!data.name_cn) {
+                showToast('请填写中文名称', 'warning');
+                return;
+            }
+
+            try {
+                // If opened from order item context, update order item's workshop/equipment
+                // (the backend auto-adds to material aggregate), and don't overwrite material aggregate
+                if (_currentEditOrderItemId) {
+                    const orderItemWorkshop = data.workshop;
+                    const orderItemEquipment = data.equipment;
+                    // Remove workshop/equipment from material update to preserve aggregate
+                    delete data.workshop;
+                    delete data.equipment;
+                    await api.put(`/materials/${materialId}`, data);
+                    await api.put(`/orders/items/${_currentEditOrderItemId}`, {
+                        workshop: orderItemWorkshop,
+                        equipment: orderItemEquipment
+                    });
+                } else {
+                    await api.put(`/materials/${materialId}`, data);
+                }
+
+                // Upload new image if selected
+                const imageFile = document.getElementById('editMatImage').files[0];
+                if (imageFile) {
+                    const imageFormData = new FormData();
+                    imageFormData.append('file', imageFile);
+                    await api.upload(`/materials/${materialId}/image`, imageFormData);
+                }
+
+                // Upload new PDF if selected
+                const pdfFile = document.getElementById('editMatPdf').files[0];
+                if (pdfFile) {
+                    const pdfFormData = new FormData();
+                    pdfFormData.append('file', pdfFile);
+                    await api.upload(`/materials/${materialId}/drawing`, pdfFormData);
+                }
+
+                showToast('物料已更新');
+                closeModal('editMaterialModal');
+                _currentEditOrderItemId = null;
+                loadOrderItems(currentPage); // Refresh table
+            } catch (error) {
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        // === Edit Order Item Functions ===
+        async function openEditOrderItemModal(itemId, poNumber) {
+            try {
+                // Find the item from allOrderItems
+                const item = allOrderItems.find(i => i.id === itemId);
+                if (!item) {
+                    showToast('找不到此明细项', 'error');
+                    return;
+                }
+
+                document.getElementById('editOrderItemId').value = itemId;
+                document.getElementById('editOrderPO').value = poNumber;
+
+                // Set supplier info
+                document.getElementById('editOrderSupplierId').value = item.supplier_id || '';
+                document.getElementById('editOrderOriginalSupplierId').value = item.supplier_id || '';
+                document.getElementById('editOrderSupplierSearch').value = item.supplier_name || '';
+
+                document.getElementById('editOrderTitle').textContent = `编辑订单明细`;
+                openModal('editOrderModal');
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        async function searchSuppliersForEdit(query) {
+            const resultsDiv = document.getElementById('editSupplierResults');
+
+            if (query.length < 1) {
+                resultsDiv.classList.remove('show');
+                return;
+            }
+
+            try {
+                const results = await api.get(`/orders/suppliers/search?q=${encodeURIComponent(query)}`);
+
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="search-result-item">无匹配结果</div>';
+                } else {
+                    resultsDiv.innerHTML = results.map(s => `
+                        <div class="search-result-item" onclick="selectSupplierForEdit(${s.id}, '${s.name}')">
+                            <strong>${s.code}</strong> - ${s.name}
+                        </div>
+                    `).join('');
+                }
+                resultsDiv.classList.add('show');
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        function selectSupplierForEdit(id, name) {
+            document.getElementById('editOrderSupplierId').value = id;
+            document.getElementById('editOrderSupplierSearch').value = name;
+            document.getElementById('editSupplierResults').classList.remove('show');
+        }
+
+        async function saveOrderItemEdit() {
+            const itemId = document.getElementById('editOrderItemId').value;
+            const newSupplierId = document.getElementById('editOrderSupplierId').value;
+            const originalSupplierId = document.getElementById('editOrderOriginalSupplierId').value;
+
+            // Normalize to empty string for comparison
+            const normalizedNew = newSupplierId || '';
+            const normalizedOriginal = originalSupplierId || '';
+
+            try {
+                // If supplier changed, move item to different order
+                if (normalizedNew !== normalizedOriginal) {
+                    const moveData = {
+                        new_supplier_id: newSupplierId ? parseInt(newSupplierId) : null
+                    };
+                    const result = await api.post(`/orders/items/${itemId}/move`, moveData);
+                    if (result.new_po_number) {
+                        showToast(`已移动到订单 ${result.new_po_number}`);
+                    }
+                } else {
+                    showToast('明细已更新');
+                }
+
+                closeModal('editOrderModal');
+                loadOrderItems(currentPage);
+            } catch (error) {
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        // Inline status update from table dropdown
+        async function updateOrderItemStatus(itemId, selectEl) {
+            const newStatus = selectEl.value;
+            try {
+                await api.put(`/orders/items/${itemId}`, { item_status: newStatus });
+                showToast('状态已更新');
+                // Update select color class
+                const cls = getItemStatusClass(newStatus);
+                selectEl.className = 'inline-status-select status-' + cls;
+            } catch (error) {
+                showToast('更新失败: ' + error.message, 'error');
+                loadOrderItems(currentPage);
+            }
+        }
+
+        // Delete order item
+        async function deleteOrderItem(itemId) {
+            if (!confirm('确定要删除此订单明细吗？')) return;
+            try {
+                await api.delete(`/orders/items/${itemId}`);
+                showToast('已删除');
+                loadOrderItems(currentPage);
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                '草稿': 'neutral',
+                '已提交': 'info',
+                '已确认': 'info',
+                '部分到货': 'warning',
+                '已完成': 'success',
+                '已取消': 'danger'
+            };
+            return classes[status] || 'neutral';
+        }
+
+        async function searchSuppliers(query) {
+            const resultsDiv = document.getElementById('supplierResults');
+
+            if (query.length < 1) {
+                resultsDiv.classList.remove('show');
+                return;
+            }
+
+            try {
+                const results = await api.get(`/orders/suppliers/search?q=${encodeURIComponent(query)}`);
+
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="search-result-item">无匹配结果</div>';
+                } else {
+                    resultsDiv.innerHTML = results.map(s => `
+                        <div class="search-result-item" onclick="selectSupplier(${s.id}, '${s.name}')">
+                            <strong>${s.code}</strong> - ${s.name}
+                        </div>
+                    `).join('');
+                }
+                resultsDiv.classList.add('show');
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        function selectSupplier(id, name) {
+            document.getElementById('supplierId').value = id;
+            document.getElementById('supplierSearch').value = name;
+            document.getElementById('supplierResults').classList.remove('show');
+        }
+
+        function addOrderItem() {
+            itemCounter++;
+            const itemHtml = `
+                <div class="order-item-row" id="orderItem${itemCounter}" data-index="${itemCounter}" style="display: block; background: var(--bg-secondary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: var(--spacing-md); align-items: end; margin-bottom: var(--spacing-sm);">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">物料 * <a href="javascript:void(0)" onclick="openAddMaterialPage()" style="font-size: 0.75rem; color: var(--accent-primary);">➕ 新建物料</a></label>
+                            <div class="search-dropdown">
+                                <input type="text" class="form-input" placeholder="输入SAP号或名称搜索..." 
+                                       oninput="searchMaterialForItem(${itemCounter}, this.value)">
+                                <input type="hidden" class="material-id" data-index="${itemCounter}">
+                                <div class="search-results" id="materialResults${itemCounter}"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">数量</label>
+                            <input type="number" class="form-input item-qty" min="1" value="1" onchange="updateTotal()">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">单价 (VND)</label>
+                            <input type="number" class="form-input item-price" min="0" value="0" onchange="updateTotal()" list="priceHistory${itemCounter}">
+                            <datalist id="priceHistory${itemCounter}"></datalist>
+                        </div>
+                        <button type="button" class="btn btn-icon btn-danger" onclick="removeOrderItem(${itemCounter})" style="margin-bottom: 0;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 2fr; gap: var(--spacing-md);">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted);">需求日期</label>
+                            <input type="date" class="form-input item-required-date" style="font-size: 0.875rem;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted);">使用车间</label>
+                            <select class="form-select item-workshop" style="font-size: 0.875rem;" id="itemWorkshop${itemCounter}">
+                                <option value="">选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted);">使用设备</label>
+                            <select class="form-select item-equipment" style="font-size: 0.875rem;" id="itemEquipment${itemCounter}">
+                                <option value="">选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted);">作用说明</label>
+                            <div style="display: flex; gap: 4px;">
+                                <select class="form-select item-purpose-select" id="purposeSelect${itemCounter}" onchange="onPurposeSelectChange(${itemCounter})" style="font-size: 0.875rem; flex: 1;">
+                                    <option value="">选择说明...</option>
+                                    <option value="__new__">＋ 新增说明</option>
+                                </select>
+                                <input type="text" class="form-input item-purpose-new" id="purposeNew${itemCounter}" placeholder="输入新说明..." style="font-size: 0.875rem; display: none; flex: 1;">
+                            </div>
+                            <input type="hidden" class="item-purpose" id="purposeValue${itemCounter}">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('orderItems').insertAdjacentHTML('beforeend', itemHtml);
+            // Load workshop and equipment options
+            loadItemConfigDropdowns(itemCounter);
+        }
+
+        // Global config storage
+        window.allWorkshops = [];
+        window.groupedEquipment = {};
+
+        // Load item config dropdowns (Workshop & Equipment)
+        async function loadItemConfigDropdowns(index) {
+            try {
+                const workshopSelect = document.getElementById('itemWorkshop' + index);
+                const equipmentSelect = document.getElementById('itemEquipment' + index);
+
+                // Use cached if available (populated by main loadConfigDropdowns or fetch here)
+                // But we are in a helper that might run before main? No, usually main runs on load.
+                // Safest to re-fetch or use globals. Let's use globals populated by main loadConfigDropdowns
+                // But main might NOT have loaded yet if page just opened? 
+
+                // Let's ensure globals are loaded.
+                if (!window.allWorkshops || window.allWorkshops.length === 0) {
+                    await loadConfigDropdowns();
+                }
+
+                // Populate Workshop
+                workshopSelect.innerHTML = '<option value="">选择车间</option>' +
+                    window.allWorkshops.map(w => `<option value="${w.value}">${w.value}</option>`).join('');
+
+                // Bind change event manually since we are inserting HTML
+                workshopSelect.onchange = function () {
+                    updateEquipmentOptions(this, 'itemEquipment' + index);
+                };
+
+                // Initial equipment state
+                equipmentSelect.innerHTML = '<option value="">请先选择车间</option>';
+
+            } catch (err) {
+                console.error('Failed to load config options:', err);
+            }
+        }
+
+        // Update Equipment options based on selected Workshop
+        function updateEquipmentOptions(workshopSelect, equipmentSelectId, currentEquipmentValue = null) {
+            const workshopVal = workshopSelect.value;
+            const equipmentSelect = document.getElementById(equipmentSelectId);
+            if (!equipmentSelect) return;
+
+            if (!workshopVal) {
+                equipmentSelect.innerHTML = '<option value="">请先选择车间</option>';
+                return;
+            }
+
+            const equipments = window.groupedEquipment[workshopVal] || [];
+
+            let html = '<option value="">选择设备</option>';
+            equipments.forEach(eq => {
+                html += `<option value="${eq.value}">${eq.value}</option>`;
+            });
+
+            equipmentSelect.innerHTML = html;
+
+            if (currentEquipmentValue) {
+                equipmentSelect.value = currentEquipmentValue;
+            }
+        }
+
+        function removeOrderItem(index) {
+            document.getElementById(`orderItem${index}`).remove();
+            updateTotal();
+        }
+
+        async function searchMaterialForItem(index, query) {
+            const resultsDiv = document.getElementById(`materialResults${index}`);
+
+            if (query.length < 1) {
+                resultsDiv.classList.remove('show');
+                return;
+            }
+
+            try {
+                const results = await api.get(`/materials/search?q=${encodeURIComponent(query)}`);
+
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="search-result-item">无匹配结果</div>';
+                } else {
+                    resultsDiv.innerHTML = results.map(m => {
+                        const safeName = (m.sap_code + ' - ' + m.name_cn).replace(/'/g, "\\'").replace(/[\r\n]+/g, " ");
+                        return `
+                        <div class="search-result-item" onclick="selectMaterial(${index}, ${m.id}, '${safeName}')">
+                            <strong>${m.sap_code}</strong> - ${m.name_cn}
+                            ${m.name_vn ? `<br><small style="color: var(--text-muted);">${m.name_vn}</small>` : ''}
+                        </div>
+                    `}).join('');
+                }
+                resultsDiv.classList.add('show');
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        function selectMaterial(index, id, name) {
+            const row = document.getElementById(`orderItem${index}`);
+            row.querySelector('.material-id').value = id;
+            row.querySelector('input[type="text"]').value = name;
+            document.getElementById(`materialResults${index}`).classList.remove('show');
+
+            // Load price history for this material
+            loadPriceHistory(index, id);
+            // Load notes/specs for this material
+            loadMaterialNotes(index, id);
+        }
+
+        async function loadMaterialNotes(index, materialId) {
+            try {
+                const notes = await api.get(`/materials/${materialId}/notes`);
+                const select = document.getElementById(`purposeSelect${index}`);
+                if (!select) return;
+
+                // Keep the first two options, add notes
+                select.innerHTML = '<option value="">选择说明...</option>';
+                notes.forEach(n => {
+                    const opt = document.createElement('option');
+                    opt.value = n.content;
+                    opt.textContent = n.content;
+                    select.appendChild(opt);
+                });
+                select.innerHTML += '<option value="__new__">＋ 新增说明</option>';
+            } catch (err) {
+                console.error('Failed to load material notes:', err);
+            }
+        }
+
+        function onPurposeSelectChange(index) {
+            const select = document.getElementById(`purposeSelect${index}`);
+            const newInput = document.getElementById(`purposeNew${index}`);
+            const hiddenInput = document.getElementById(`purposeValue${index}`);
+
+            if (select.value === '__new__') {
+                newInput.style.display = 'block';
+                newInput.focus();
+                hiddenInput.value = '';
+            } else {
+                newInput.style.display = 'none';
+                newInput.value = '';
+                hiddenInput.value = select.value;
+            }
+        }
+
+        async function loadPriceHistory(index, materialId) {
+            try {
+                const prices = await api.get(`/orders/materials/${materialId}/price-history`);
+                const datalist = document.getElementById(`priceHistory${index}`);
+                if (datalist && prices.length > 0) {
+                    datalist.innerHTML = prices.map(p =>
+                        `<option value="${p.price}">${formatCurrency(p.price)} (${p.supplier || '未知供应商'})</option>`
+                    ).join('');
+
+                    // Auto-fill with the most recent price
+                    const row = document.getElementById(`orderItem${index}`);
+                    if (row) {
+                        const priceInput = row.querySelector('.item-price');
+                        if (priceInput && (!priceInput.value || parseFloat(priceInput.value) === 0)) {
+                            priceInput.value = prices[0].price;
+                            updateTotal();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load price history:', err);
+            }
+        }
+
+        // --- SAP Code Pending Toggle ---
+        function toggleSapPending(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (!input || !btn) return;
+
+            if (input.dataset.pending === 'true') {
+                // Turn OFF pending mode
+                input.dataset.pending = 'false';
+                input.value = '';
+                input.readOnly = false;
+                input.style.opacity = '1';
+                btn.innerHTML = '⏳ 暂无号码，申请中';
+                btn.style.color = 'var(--color-warning)';
+                btn.style.borderColor = 'var(--color-warning)';
+                btn.style.background = 'rgba(245,158,11,0.08)';
+                // Re-fetch the next SAP code
+                api.get('/materials/next-sap-code').then(result => {
+                    if (!input.value) input.value = result.next_sap_code;
+                }).catch(() => { });
+            } else {
+                // Turn ON pending mode
+                input.dataset.pending = 'true';
+                input.value = 'PENDING-' + Date.now();
+                input.readOnly = true;
+                input.style.opacity = '0.5';
+                btn.innerHTML = '✅ 已标记申请中 (点击撤销)';
+                btn.style.color = 'var(--color-success)';
+                btn.style.borderColor = 'var(--color-success)';
+                btn.style.background = 'rgba(34,197,94,0.08)';
+            }
+        }
+
+        function openAddMaterialPage() {
+            // Open nested modal instead of new window
+            document.getElementById('quickMaterialForm').reset();
+            openModal('createMaterialModal');
+            // Reset pending state
+            const sapInput = document.getElementById('newMaterialSapCode');
+            const pendingBtn = document.getElementById('orderSapPendingBtn');
+            if (sapInput) {
+                sapInput.dataset.pending = 'false';
+                sapInput.readOnly = false;
+                sapInput.style.opacity = '1';
+            }
+            if (pendingBtn) {
+                pendingBtn.innerHTML = '⏳ 暂无号码，申请中';
+                pendingBtn.style.color = 'var(--color-warning)';
+                pendingBtn.style.borderColor = 'var(--color-warning)';
+                pendingBtn.style.background = 'rgba(245,158,11,0.08)';
+            }
+            // Auto-fill next SAP code
+            api.get('/materials/next-sap-code').then(result => {
+                const sapInput = document.getElementById('newMaterialSapCode');
+                if (sapInput && !sapInput.value) {
+                    sapInput.value = result.next_sap_code;
+                }
+            }).catch(e => console.warn('Failed to fetch next SAP code:', e));
+        }
+
+        async function quickCreateMaterial() {
+            const sapCode = document.getElementById('newMaterialSapCode').value.trim();
+            const nameCn = document.getElementById('newMaterialNameCn').value.trim();
+            const nameVn = document.getElementById('newMaterialNameVn').value.trim();
+            const category = document.getElementById('newMaterialCategory').value;
+            const subcategory = document.getElementById('newMaterialSubcategory').value;
+            const workshop = document.getElementById('newMaterialWorkshop').value;
+            const equipment = document.getElementById('newMaterialEquipment').value;
+            const specs = document.getElementById('newMaterialSpecs').value.trim();
+            const imageFile = document.getElementById('newMaterialImage').files[0];
+            const pdfFile = document.getElementById('newMaterialPdf').files[0];
+
+            if (!sapCode || !nameCn) {
+                showToast('请填写SAP号码和中文名称', 'warning');
+                return;
+            }
+
+            try {
+                // Create material first
+                const result = await api.post('/materials/', {
+                    sap_code: sapCode,
+                    name_cn: nameCn,
+                    name_vn: nameVn || null,
+                    category: category,
+                    subcategory: subcategory || null,
+                    workshop: workshop || null,
+                    equipment: equipment || null,
+                    specs: specs || null
+                });
+
+                const materialId = result.id;
+
+                // Upload image if provided
+                if (imageFile && materialId) {
+                    const imageFormData = new FormData();
+                    imageFormData.append('file', imageFile);
+                    try {
+                        await api.upload(`/materials/${materialId}/image`, imageFormData);
+                    } catch (e) {
+                        console.error('Image upload failed:', e);
+                    }
+                }
+
+                // Upload PDF if provided
+                if (pdfFile && materialId) {
+                    const pdfFormData = new FormData();
+                    pdfFormData.append('file', pdfFile);
+                    try {
+                        await api.upload(`/materials/${materialId}/pdf`, pdfFormData);
+                    } catch (e) {
+                        console.error('PDF upload failed:', e);
+                    }
+                }
+
+                // Save specs as a material note if provided
+                if (specs && materialId) {
+                    try {
+                        await api.post(`/materials/${materialId}/notes`, { content: specs });
+                    } catch (e) {
+                        console.warn('Note save failed:', e);
+                    }
+                }
+
+                showToast(`物料 ${sapCode} 创建成功！现在可以在搜索中找到它。`);
+                closeModal('createMaterialModal');
+            } catch (error) {
+                showToast('创建失败: ' + error.message, 'error');
+            }
+        }
+
+        function updateTotal() {
+            let total = 0;
+            document.querySelectorAll('.order-item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                total += qty * price;
+            });
+            document.getElementById('orderTotal').textContent = formatCurrency(total);
+        }
+
+        async function saveOrder() {
+            const form = document.getElementById('createOrderForm');
+            const formData = new FormData(form);
+
+            const supplierId = formData.get('supplier_id');
+            // Supplier is now optional
+            // if (!supplierId || supplierId === '' || isNaN(parseInt(supplierId))) {
+            //     showToast('请选择供应商', 'error');
+            //     return;
+            // }
+
+            const orderDate = formData.get('order_date');
+            if (!orderDate) {
+                showToast('请选择采购日期', 'error');
+                return;
+            }
+
+            // Collect items with per-item fields
+            const items = [];
+            const newNotesToSave = []; // Collect new notes to save after
+            document.querySelectorAll('.order-item-row').forEach(row => {
+                const materialId = row.querySelector('.material-id').value;
+                const qty = parseInt(row.querySelector('.item-qty').value);
+                const price = parseFloat(row.querySelector('.item-price').value);
+                const requiredDate = row.querySelector('.item-required-date')?.value || null;
+                const workshop = row.querySelector('.item-workshop')?.value || null;
+                const equipment = row.querySelector('.item-equipment')?.value || null;
+                const purposeSelect = row.querySelector('.item-purpose-select');
+                const purposeNew = row.querySelector('.item-purpose-new');
+                let purpose = '';
+                if (purposeSelect && purposeSelect.value === '__new__' && purposeNew) {
+                    purpose = purposeNew.value.trim();
+                    if (purpose && materialId) {
+                        newNotesToSave.push({ materialId, content: purpose });
+                    }
+                } else if (purposeSelect) {
+                    purpose = purposeSelect.value || '';
+                }
+
+                if (materialId && qty > 0) {
+                    items.push({
+                        material_id: parseInt(materialId),
+                        ordered_qty: qty,
+                        unit_price: price || 0,
+                        required_date: requiredDate || null,
+                        workshop: workshop || null,
+                        equipment: equipment || null,
+                        purpose: purpose || null
+                    });
+                }
+            });
+
+            // Save new notes to materials
+            for (const note of newNotesToSave) {
+                try { await api.post(`/materials/${note.materialId}/notes`, { content: note.content }); } catch (e) { console.warn('Note save failed:', e); }
+            }
+
+            if (items.length === 0) {
+                showToast('请至少添加一个物料并确保已选择物料', 'error');
+                return;
+            }
+
+            // PO number is auto-generated by backend
+            // PO number is auto-generated by backend
+            const orderData = {
+                // order_type: formData.get('order_type'), // Removed from UI, defaults to backend value
+                supplier_id: supplierId ? parseInt(supplierId) : null,
+                order_date: orderDate,
+                items: items
+            };
+
+            console.log('Creating order:', orderData);
+
+            try {
+                const result = await api.post('/orders', orderData);
+                showToast(`订单创建成功！PO号: ${result.po_number}`);
+                closeModal('createOrderModal');
+                form.reset();
+                document.getElementById('orderItems').innerHTML = '';
+                document.getElementById('supplierId').value = '';
+                document.getElementById('supplierSearch').value = '';
+                document.querySelector('input[name="order_date"]').valueAsDate = new Date();
+                loadOrderItems();
+                addOrderItem(); // Add first item row for next order
+            } catch (error) {
+                console.error('Order creation error:', error);
+                showToast('创建失败: ' + error.message, 'error');
+            }
+        }
+
+        async function viewOrder(id) {
+            try {
+                const order = await api.get(`/orders/${id}`);
+
+                document.getElementById('orderDetailTitle').textContent = `订单 ${order.po_number}`;
+
+                document.getElementById('orderDetailContent').innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">供应商</h4>
+                            <p>${order.supplier?.name || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">类型</h4>
+                            <p><span class="badge badge-${order.order_type === '五金件' ? 'info' : 'warning'}">${order.order_type}</span></p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">状态</h4>
+                            <p><span class="badge badge-${getStatusClass(order.status)}">${order.status}</span></p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">采购日期</h4>
+                            <p>${formatDate(order.order_date)}</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">需求日期</h4>
+                            <p>${formatDate(order.required_date)}</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">到达日期</h4>
+                            <p>${formatDate(order.arrival_date)}</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">使用车间</h4>
+                            <p>${order.workshop || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">设备</h4>
+                            <p>${order.equipment || '-'}</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem;">发票号</h4>
+                            <p>${order.invoice_number || '-'}</p>
+                        </div>
+                    </div>
+                    
+                    ${order.purpose ? `<div style="margin-bottom: var(--spacing-xl);"><h4 style="color: var(--text-secondary); font-size: 0.875rem;">作用说明</h4><p>${order.purpose}</p></div>` : ''}
+                    
+                    <h4 style="margin-bottom: var(--spacing-md);">订单明细</h4>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>图片</th>
+                                    <th>SAP号</th>
+                                    <th>物料名称</th>
+                                    <th>订货数量</th>
+                                    <th>收货数量</th>
+                                    <th>单价</th>
+                                    <th>小计</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${order.items.map(item => `
+                                    <tr>
+                                        <td>
+                                            <div class="material-thumb">
+                                                ${item.material?.image
+                        ? `<img src="${item.material.image}" class="thumb-item" onclick="openLightbox('${item.material.image}', 'image')" title="点击查看大图">`
+                        : ''}
+                                                ${item.material?.drawing_pdf
+                        ? `<div class="pdf-mini" onclick="openLightbox('${item.material.drawing_pdf}', 'pdf')" title="点击查看PDF图纸"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>`
+                        : ''}
+                                                ${!item.material?.image && !item.material?.drawing_pdf ? '<span style="color:var(--text-muted);font-size:0.8rem;">-</span>' : ''}
+                                            </div>
+                                        </td>
+                                        <td><strong>${item.material?.sap_code || '-'}</strong></td>
+                                        <td>${item.material?.name_cn || '-'}</td>
+                                        <td>${item.ordered_qty}</td>
+                                        <td>${item.received_qty} ${item.is_fully_received ? '<span class="badge badge-success">完成</span>' : ''}</td>
+                                        <td>${formatCurrency(item.unit_price)}</td>
+                                        <td>${formatCurrency(item.total_price)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: var(--bg-tertiary);">
+                                    <td colspan="6" style="text-align: right;"><strong>合计</strong></td>
+                                    <td><strong>${formatCurrency(order.total_amount)}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+
+                openModal('orderDetailModal');
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // Hide dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-dropdown')) {
+                document.querySelectorAll('.search-results').forEach(r => r.classList.remove('show'));
+            }
+        });
+
+        // Export orders based on current filtered view
+        async function exportOrders() {
+            try {
+                showToast('正在导出订单数据...', 'info');
+
+                let url = `/orders/items?skip=0&limit=99999`;
+                const search = document.getElementById('searchInput').value;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                url += `&sort_by=date_desc`;
+
+                const data = await api.get(url);
+                let items = data.items || [];
+
+                // Apply client-side column filters (same as applyOrderFilters)
+                const filterPO = document.getElementById('filterPO')?.value.toLowerCase() || '';
+                const filterSupplier = document.getElementById('filterSupplier')?.value.toLowerCase() || '';
+                const filterSapOrder = document.getElementById('filterSapOrder')?.value.toLowerCase() || '';
+                const filterMaterial = document.getElementById('filterMaterial')?.value.toLowerCase() || '';
+                const filterWorkshop = document.getElementById('filterWorkshopOrder')?.value || '';
+                const filterEquipment = document.getElementById('filterEquipmentOrder')?.value || '';
+
+                if (filterPO || filterSupplier || filterSapOrder || filterMaterial || filterWorkshop || filterEquipment) {
+                    items = items.filter(item => {
+                        if (filterPO && !(item.po_number || '').toLowerCase().includes(filterPO)) return false;
+                        if (filterSupplier && !(item.supplier_name || '').toLowerCase().includes(filterSupplier)) return false;
+                        if (filterSapOrder && !(item.sap_code || '').toLowerCase().includes(filterSapOrder)) return false;
+                        if (filterMaterial && !(item.material_name || '').toLowerCase().includes(filterMaterial)) return false;
+                        if (filterWorkshop && (item.workshop || '') !== filterWorkshop) return false;
+                        if (filterEquipment && (item.equipment || '') !== filterEquipment) return false;
+                        return true;
+                    });
+                }
+
+                if (items.length === 0) {
+                    showToast('没有可导出的数据', 'warning');
+                    return;
+                }
+
+                // Build CSV
+                const headers = ['状态', '采购日期', 'PO号', '供应商', 'SAP号码', '物料名称', '数量', '单价', '小计', '车间', '设备', '到货时间'];
+                let csv = '\ufeff' + headers.join(',') + '\n';
+                items.forEach(item => {
+                    const row = [
+                        item.item_status || '未下单',
+                        item.order_date || '',
+                        item.po_number || '',
+                        item.supplier_name || '',
+                        item.sap_code || '',
+                        item.material_name || '',
+                        String(item.ordered_qty || 0),
+                        String(item.unit_price || 0),
+                        String(item.total_price || 0),
+                        item.workshop || '',
+                        item.equipment || '',
+                        item.arrival_date || ''
+                    ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+                    csv += row.join(',') + '\n';
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `采购订单导出_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+
+                showToast(`导出成功，共 ${items.length} 条记录`);
+            } catch (error) {
+                showToast('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // Import orders from Excel/CSV
+        async function submitOrderImport() {
+            const fileInput = document.getElementById('importOrderFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('请选择文件', 'warning');
+                return;
+            }
+
+            const statusDiv = document.getElementById('importOrderStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div class="spinner" style="margin: 0 auto 0.5rem;"></div>正在解析并导入数据...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const result = await api.upload('/orders/import', formData);
+
+                let msg = `<div style="color: var(--color-success); font-weight: bold; margin-bottom: 5px;">✅ 导入完成</div>`;
+                msg += `<div>新建订单: <strong>${result.orders_created || 0}</strong> | 新建明细: <strong>${result.items_created || 0}</strong></div>`;
+
+                if (result.errors && result.errors.length > 0) {
+                    msg += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color);">`;
+                    msg += `<div style="color: var(--color-warning); margin-bottom: 5px;">⚠️ 发现 ${result.errors.length} 个问题:</div>`;
+                    msg += `<div style="max-height: 100px; overflow-y: auto; font-size: 0.8rem; color: var(--text-muted);">${result.errors.join('<br>')}</div></div>`;
+                    showToast('导入完成，部分数据有误', 'warning');
+                } else {
+                    showToast('导入成功');
+                    setTimeout(() => {
+                        closeModal('importOrderModal');
+                        statusDiv.style.display = 'none';
+                        fileInput.value = '';
+                    }, 2000);
+                }
+
+                statusDiv.innerHTML = msg;
+                loadOrderItems();
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: var(--color-danger);">❌ 导入失败: ${error.message}</div>`;
+                showToast('导入失败', 'error');
+            }
+        }
+
+        loadOrderItems();
+        addOrderItem(); // Add first item row by default
+        loadConfigDropdowns(); // Load options for quick create material
+
+        // Global variable to store subcategories
+        window.allSubcategories = [];
+
+        async function loadConfigDropdowns() {
+            try {
+                // Load subcategory options
+                const subcategoryOptions = await api.get('/config/subcategory');
+                window.allSubcategories = subcategoryOptions;
+
+                // Group by parent
+                const grouped = {};
+                subcategoryOptions.forEach(opt => {
+                    const parent = opt.parent_value || '其他';
+                    if (!grouped[parent]) grouped[parent] = [];
+                    grouped[parent].push(opt);
+                });
+
+                const buildOptions = () => {
+                    let html = '<option value="">请选择或输入</option>';
+                    for (const [parent, opts] of Object.entries(grouped)) {
+                        html += `<optgroup label="${parent}">`;
+                        opts.forEach(opt => {
+                            html += `<option value="${opt.value}" data-parent="${parent}">${opt.value}</option>`;
+                        });
+                        html += `</optgroup>`;
+                    }
+                    return html;
+                };
+
+                const subOptionsHtml = buildOptions();
+
+                ['newMaterialSubcategory', 'editMatSubcategory'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = subOptionsHtml;
+                });
+
+                // Load Workshops & Equipment
+                const [workshops, equipment] = await Promise.all([
+                    api.get('/config/workshop'),
+                    api.get('/config/equipment')
+                ]);
+
+                window.allWorkshops = workshops;
+                window.groupedEquipment = {};
+                equipment.forEach(eq => {
+                    const parent = eq.parent_value || 'Unknown';
+                    if (!window.groupedEquipment[parent]) window.groupedEquipment[parent] = [];
+                    window.groupedEquipment[parent].push(eq);
+                });
+
+                const workshopOptionsHtml = '<option value="">请选择车间</option>' +
+                    workshops.map(w => `<option value="${w.value}">${w.value}</option>`).join('');
+
+                // Populate modal dropdowns (not including filter, which has different placeholder)
+                ['editMatWorkshop', 'newMaterialWorkshop'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = workshopOptionsHtml;
+                });
+
+                // Populate workshop filter dropdown with different placeholder
+                const filterWsEl = document.getElementById('filterWorkshopOrder');
+                if (filterWsEl) {
+                    filterWsEl.innerHTML = '<option value="">所有车间</option>' +
+                        workshops.map(w => `<option value="${w.value}">${w.value}</option>`).join('');
+                }
+
+                // For Edit Modal, bind change event
+                const editWs = document.getElementById('editMatWorkshop');
+                if (editWs) {
+                    editWs.onchange = function () { updateEquipmentOptions(this, 'editMatEquipment'); };
+                }
+
+            } catch (e) {
+                console.error('Failed to load config dropdowns:', e);
+            }
+        }
+
+        // Update hidden category input based on selected subcategory
+        function onSubcategoryChange(selectEl, categoryInputId) {
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const parent = selectedOption ? selectedOption.getAttribute('data-parent') : '';
+            const categoryInput = document.getElementById(categoryInputId);
+            if (categoryInput) {
+                categoryInput.value = parent;
+            }
+        }
+
+        // --- Lightbox Functions ---
+        let currentZoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        function openLightbox(src, type) {
+            const content = document.getElementById('lightboxContent');
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+
+            if (type === 'image') {
+                content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <img src="${src}" alt="预览图片" class="zoomable" id="lightboxImage" style="transform: translate(0px, 0px) scale(1); cursor: grab; will-change: transform;">
+                    <div class="lightbox-controls">
+                        <button onclick="zoomOut()" title="缩小">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button onclick="zoomIn()" title="放大">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <button onclick="resetZoom()" title="重置">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    const img = document.getElementById('lightboxImage');
+                    if (img) {
+                        img.addEventListener('wheel', handleWheelZoom, { passive: false });
+                        img.addEventListener('mousedown', startDrag);
+                        img.addEventListener('mousemove', doDrag);
+                        img.addEventListener('mouseup', endDrag);
+                        img.addEventListener('mouseleave', endDrag);
+                    }
+                }, 100);
+
+            } else if (type === 'pdf') {
+                content.innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <iframe src="${src}" style="width:80vw;height:85vh;border:none;background:white;border-radius:var(--radius-md);"></iframe>
+                `;
+            }
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function handleWheelZoom(e) {
+            e.preventDefault();
+            const oldZoom = currentZoom;
+            if (e.deltaY < 0) {
+                currentZoom = Math.min(currentZoom * 1.1, 5);
+            } else {
+                currentZoom = Math.max(currentZoom / 1.1, 0.25);
+            }
+            if (oldZoom !== currentZoom) {
+                const ratio = currentZoom / oldZoom;
+                panX *= ratio;
+                panY *= ratio;
+            }
+            updateZoom();
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.cursor = 'grabbing';
+                img.style.transition = 'none';
+            }
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+            }
+        }
+
+        function endDrag(e) {
+            isDragging = false;
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+                img.style.transition = 'transform 0.1s ease-out';
+            }
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.25, 5);
+            updateZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.25, 0.25);
+            updateZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+            updateZoom();
+        }
+
+        function updateZoom() {
+            const img = document.getElementById('lightboxImage');
+            if (img) {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+                img.style.cursor = currentZoom > 1 ? 'grab' : 'zoom-in';
+                document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+            }
+        }
+
+        function closeLightbox(event) {
+            if (event.target.id === 'lightbox' || event.target.classList.contains('lightbox-close')) {
+                document.getElementById('lightbox').classList.remove('active');
+                document.body.style.overflow = '';
+                currentZoom = 1;
+            }
+        }
+
+        // ===== Edit Material Modal Notes CRUD (Orders page) =====
+        async function loadOrderMatNotes(materialId) {
+            const container = document.getElementById('editOrderMatNotesContainer');
+            if (!container) return;
+            container.dataset.materialId = materialId;
+            try {
+                const notes = await api.get(`/materials/${materialId}/notes`);
+                if (notes.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">暂无说明记录，可在下方添加</p>';
+                    return;
+                }
+                container.innerHTML = notes.map(n => `
+                    <div id="editOrderMatNote-${n.id}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="flex: 1; font-size: 0.85rem;">${n.content}</span>
+                        <span style="color: var(--text-muted); font-size: 0.7rem; white-space: nowrap;">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
+                        <button type="button" class="btn btn-icon" onclick="editOrderMatNote(${n.id}, '${n.content.replace(/'/g, "\\'").replace(/\n/g, ' ')}')" style="padding: 2px;" title="编辑">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button type="button" class="btn btn-icon" onclick="deleteOrderMatNote(${n.id})" style="padding: 2px; color: var(--color-danger);" title="删除">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color: var(--color-danger);">加载失败</p>';
+            }
+        }
+
+        async function saveOrderMatNewNote() {
+            const container = document.getElementById('editOrderMatNotesContainer');
+            const materialId = container?.dataset.materialId;
+            const input = document.getElementById('editOrderMatNewNoteInput');
+            const content = input?.value.trim();
+            if (!content) { showToast('请输入说明内容', 'warning'); return; }
+            if (!materialId) return;
+            try {
+                await api.post(`/materials/${materialId}/notes`, { content });
+                input.value = '';
+                showToast('说明已添加');
+                loadOrderMatNotes(materialId);
+            } catch (e) {
+                showToast('添加失败: ' + e.message, 'error');
+            }
+        }
+
+        function editOrderMatNote(noteId, currentContent) {
+            const noteDiv = document.getElementById(`editOrderMatNote-${noteId}`);
+            if (!noteDiv) return;
+            noteDiv.innerHTML = `
+                <input type="text" id="editOrderMatNoteEditInput${noteId}" class="form-input" value="${currentContent}" style="flex: 1; font-size: 0.85rem;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveOrderMatEditNote(${noteId})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">保存</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="loadOrderMatNotes(document.getElementById('editOrderMatNotesContainer').dataset.materialId)" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">取消</button>
+            `;
+            document.getElementById(`editOrderMatNoteEditInput${noteId}`).focus();
+        }
+
+        async function saveOrderMatEditNote(noteId) {
+            const input = document.getElementById(`editOrderMatNoteEditInput${noteId}`);
+            const content = input?.value.trim();
+            if (!content) { showToast('说明不能为空', 'warning'); return; }
+            const materialId = document.getElementById('editOrderMatNotesContainer')?.dataset.materialId;
+            try {
+                await api.put(`/materials/notes/${noteId}`, { content });
+                showToast('说明已更新');
+                if (materialId) loadOrderMatNotes(materialId);
+            } catch (e) {
+                showToast('更新失败: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteOrderMatNote(noteId) {
+            if (!confirm('确定要删除这条说明吗？')) return;
+            const materialId = document.getElementById('editOrderMatNotesContainer')?.dataset.materialId;
+            try {
+                await api.delete(`/materials/notes/${noteId}`);
+                showToast('说明已删除');
+                if (materialId) loadOrderMatNotes(materialId);
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+
+        // ===== Edit Material Modal Live Previews =====
+        function previewOrderMatImage(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewHtml = `
+                        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-tertiary); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                            <img src="${e.target.result}" style="max-height: 80px; width: auto; object-fit: contain; border-radius: 4px;">
+                            <div>
+                                <div style="font-size: 0.85rem; font-weight: 500;">新选择: ${file.name}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${(file.size / 1024).toFixed(1)} KB</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('editMatImagePreview').innerHTML = previewHtml;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewOrderMatPdf(input) {
+            const file = input.files[0];
+            if (file) {
+                const previewHtml = `
+                    <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-tertiary); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--color-danger);">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 500;">新选择: ${file.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('editMatPdfPreview').innerHTML = previewHtml;
+            }
+        }
+        // ===== Price History Modal with SVG Chart =====
+        async function openPriceHistory(materialId) {
+            try {
+                const data = await api.get(`/materials/${materialId}/price-history`);
+
+                let html = `
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <h3 style="margin-bottom: var(--spacing-sm);">${data.material.name_cn}</h3>
+                        <span class="badge badge-neutral">${data.material.sap_code}</span>
+                    </div>
+                `;
+
+                if (data.suppliers.length === 0) {
+                    html += '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">暂无价格数据</p>';
+                } else {
+                    html += `
+                        <div style="margin-bottom: var(--spacing-lg);">
+                            <label class="form-label" style="margin-bottom: var(--spacing-sm);">供应商筛选</label>
+                            <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                                <button class="btn btn-sm supplier-filter-btn active" onclick="filterPriceChart('all', this)" data-filter="all" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">全部合并</button>
+                                ${data.suppliers.map(s => `
+                                    <button class="btn btn-sm supplier-filter-btn" onclick="filterPriceChart(${s.supplier_id || 0}, this)" data-filter="${s.supplier_id || 0}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">${s.supplier_name}</button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+
+                    window.priceHistoryData = data.suppliers;
+
+                    html += `
+                        <div id="priceChartContainer" style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                            <svg id="priceChart" viewBox="0 0 400 200" style="width: 100%; height: 200px;"></svg>
+                        </div>
+                    `;
+
+                    html += `<div id="priceListContainer" style="max-height: 250px; overflow-y: auto;">`;
+                    for (const supplier of data.suppliers) {
+                        html += `
+                            <div style="margin-bottom: var(--spacing-md);">
+                                <h5 style="color: var(--accent-primary); margin-bottom: var(--spacing-sm);">${supplier.supplier_name}</h5>
+                                ${supplier.prices.map(p => `
+                                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.875rem;">
+                                        <span><strong>${formatCurrency(p.price)}</strong></span>
+                                        <span style="color: var(--text-muted);">${p.date ? formatDate(p.date) : '-'} · ${p.source}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                    html += `</div>`;
+                }
+
+                document.getElementById('lightboxContent').innerHTML = `
+                    <button class="lightbox-close" onclick="closeLightbox(event)">×</button>
+                    <div style="background: var(--bg-card); padding: var(--spacing-xl); border-radius: var(--radius-lg); width: 600px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
+                        ${html}
+                    </div>
+                `;
+                document.getElementById('lightbox').classList.add('active');
+                document.body.style.overflow = 'hidden';
+
+                if (data.suppliers.length > 0) {
+                    setTimeout(() => drawPriceChart('all'), 100);
+                }
+            } catch (error) {
+                showToast('加载价格历史失败: ' + error.message, 'error');
+            }
+        }
+
+        function filterPriceChart(filter, btn) {
+            document.querySelectorAll('.supplier-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            drawPriceChart(filter);
+        }
+
+        function drawPriceChart(filter) {
+            const svg = document.getElementById('priceChart');
+            if (!svg || !window.priceHistoryData) return;
+
+            let allPoints = [];
+            const colors = ['#0ea5e9', '#22c55e', '#f59e0b', '#ec4899', '#8b5cf6'];
+
+            if (filter === 'all') {
+                window.priceHistoryData.forEach((supplier, idx) => {
+                    supplier.prices.forEach(p => {
+                        allPoints.push({ price: p.price, date: new Date(p.date), color: colors[idx % colors.length] });
+                    });
+                });
+            } else {
+                const supplier = window.priceHistoryData.find(s => (s.supplier_id || 0) == filter);
+                if (supplier) {
+                    supplier.prices.forEach(p => {
+                        allPoints.push({ price: p.price, date: new Date(p.date), color: colors[0] });
+                    });
+                }
+            }
+
+            if (allPoints.length === 0) {
+                svg.innerHTML = '<text x="200" y="100" text-anchor="middle" fill="var(--text-muted)">无数据</text>';
+                return;
+            }
+
+            allPoints.sort((a, b) => a.date - b.date);
+
+            const minPrice = Math.min(...allPoints.map(p => p.price));
+            const maxPrice = Math.max(...allPoints.map(p => p.price));
+            const priceRange = maxPrice - minPrice || 1;
+
+            const padding = { top: 20, bottom: 30, left: 60, right: 20 };
+            const width = 400 - padding.left - padding.right;
+            const height = 200 - padding.top - padding.bottom;
+
+            let svgContent = `
+                <g transform="translate(${padding.left}, ${padding.top})">
+                    <line x1="0" y1="0" x2="0" y2="${height}" stroke="var(--border-color)" stroke-width="1"/>
+                    <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="var(--border-color)" stroke-width="1"/>
+                    <text x="-5" y="10" text-anchor="end" fill="var(--text-muted)" font-size="10">${formatNumber(maxPrice)}</text>
+                    <text x="-5" y="${height}" text-anchor="end" fill="var(--text-muted)" font-size="10">${formatNumber(minPrice)}</text>
+            `;
+
+            if (allPoints.length === 1) {
+                const x = width / 2;
+                const y = height / 2;
+                svgContent += `<circle cx="${x}" cy="${y}" r="4" fill="${allPoints[0].color}"/>`;
+            } else {
+                const step = width / (allPoints.length - 1);
+                let path = '';
+                allPoints.forEach((p, i) => {
+                    const x = i * step;
+                    const y = height - ((p.price - minPrice) / priceRange) * height;
+                    if (i === 0) path += `M${x},${y}`;
+                    else path += ` L${x},${y}`;
+                });
+                svgContent += `<path d="${path}" fill="none" stroke="${allPoints[0].color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+                allPoints.forEach((p, i) => {
+                    const x = i * step;
+                    const y = height - ((p.price - minPrice) / priceRange) * height;
+                    svgContent += `<circle cx="${x}" cy="${y}" r="3" fill="${p.color}"/>`;
+                });
+            }
+
+            svgContent += '</g>';
+            svg.innerHTML = svgContent;
+        }
+
+        function formatNumber(n) {
+            const num = Number(n);
+            if (isNaN(num)) return '0';
+            const parts = String(num).split('.');
+            const decimals = parts.length > 1 ? parts[1].length : 0;
+            return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+        }
+
+    </script>
+
+    <style>
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            color: white;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 2001;
+        }
+    </style>
+    <!-- Lightbox for Price Chart -->
+    <div class="lightbox" id="lightbox" onclick="if(event.target===this) closeLightbox(event)">
+        <div class="lightbox-content" id="lightboxContent"
+            style="padding: 0; background: transparent; box-shadow: none;">
+        </div>
+    </div>
+</body>
+
+</html>
